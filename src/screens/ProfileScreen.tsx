@@ -1,55 +1,105 @@
 // src/screens/ProfileScreen.tsx
-import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
-import BookingButton from "../components/BookingButton";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, Animated } from "react-native";
+import AppButton from "../components/AppButton";
+import MaterialCommunityIcons from "@expo/vector-icons/build/MaterialCommunityIcons";
+import { Asset } from "expo-asset";
 
 const BLUE = "#0d7ff2";
 
+/* شعار متحرك فوق كارت المصباح */
+function Tagline() {
+  const o = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(o, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.delay(900),
+        Animated.timing(o, { toValue: 0, duration: 500, useNativeDriver: true }),
+        Animated.delay(300),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [o]);
+  const translateY = o.interpolate({ inputRange: [0, 1], outputRange: [8, 0] });
+  return <Animated.Text style={[s.tagline, { opacity: o, transform: [{ translateY }] }]}>Book · Manage · Go</Animated.Text>;
+}
+
+type User = { name: string; email: string };
+
 export default function ProfileScreen() {
-  // بيانات المستخدم (مؤقتة، ممكن لاحقًا تجي من Firebase)
-  const user = {
-    name: "John Doe",
-    email: "john.doe@hawc.be",
-    avatar: "https://i.pravatar.cc/150?img=12",
-  };
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require("../mockData/user.json"));
+        await asset.downloadAsync();
+        const uri = asset.localUri ?? asset.uri;
+        const res = await fetch(uri);
+        const json = (await res.json()) as User;
+        if (alive) setUser(json);
+      } catch {
+        const json = require("../mockData/user.json") as User;
+        if (alive) setUser(json);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const handleLogout = () => {
     console.log("User logged out");
-    // TODO: logout logic from Firebase later
   };
 
   return (
     <View style={s.container}>
+      {/* بطاقة المستخدم */}
       <View style={s.card}>
-        <Image source={{ uri: user.avatar }} style={s.avatar} />
-        <Text style={s.name}>{user.name}</Text>
-        <Text style={s.email}>{user.email}</Text>
+        <MaterialCommunityIcons name="account-circle-outline" size={64} color="#94a3b8" style={{ marginBottom: 12 }} />
+        <Text style={s.name}>{user?.name ?? "—"}</Text>
+        <Text style={s.email}>{user?.email ?? "—"}</Text>
       </View>
 
-      <BookingButton
-      label="Log out"
-      onPress={handleLogout}
-      style={{ width: "90%", height: 64, borderRadius: 18, marginTop: 48 }}/>
+      {/* زر تسجيل الخروج */}
+      <AppButton label="Log out" onPress={handleLogout} style={{ width: "90%", height: 64, borderRadius: 18, marginTop: 36 }} />
+
+      <View style={{ flex: 1 }} />
+
+      {/* الشعار المتحرك + كارت المصباح */}
+      <View style={s.tipArea}>
+        <Tagline />
+        <View style={s.tipCard}>
+          <MaterialCommunityIcons name="lightbulb-on-outline" size={20} color={BLUE} />
+          <Text style={s.tipText}>HAWC Visitor keeps your bookings organized</Text>
         </View>
-      );
+      </View>
+    </View>
+  );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb", alignItems: "center", paddingTop: 80 },
+  container: { flex: 1, backgroundColor: "#f9fafb", alignItems: "center", paddingTop: 110, position: "relative" },
   card: {
     alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    width: "85%",
+    borderRadius: 20,
+    paddingVertical: 50,
+    paddingHorizontal: 28,
+    width: "88%",
     shadowColor: BLUE,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 3,
   },
-  avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16 },
-  name: { fontSize: 20, fontWeight: "800", color: "#0b1220" },
-  email: { fontSize: 14, color: "#64748b", marginTop: 4 },
+  name: { fontSize: 30, fontWeight: "800", color: "#0b1220", marginBottom: 6 },
+  email: { fontSize: 20, color: "#64748b" },
+  tagline: { marginBottom: 6, fontSize: 16, fontWeight: "700", color: BLUE, letterSpacing: 0.4, textAlign: "center" },
+  tipArea: { alignItems: "center", marginBottom: 24, width: "100%" },
+  tipCard: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#eaf2ff", borderRadius: 14, paddingVertical: 10, paddingHorizontal: 14, width: "90%" },
+  tipText: { color: BLUE, fontSize: 14, fontWeight: "500", flex: 1 },
 });

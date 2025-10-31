@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
 import { useRoute } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
 import type { Resource } from "../types/env";
-import BookingButton from "../components/BookingButton"; // الزر الجديد
+import BookingButton from "../components/AppButton"; // الزر الجديد
 
 const BLUE = "#0d7ff2";
 const CTA_H = 72;

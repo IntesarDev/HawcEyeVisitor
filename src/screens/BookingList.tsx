@@ -1,11 +1,11 @@
 // src/screens/BookingListScreen.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { FlatList, StyleSheet, View, TouchableOpacity, Text } from "react-native";
+import { FlatList, StyleSheet, View, Text } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import type { RootStackNavProps } from "../navigation/types";
 import type { Resource } from "../types/env";
 import { Asset } from "expo-asset";
+import ResourceListItem from "../components/ResourceListItem";
 
 const BLUE = "#0d7ff2";
 
@@ -135,7 +135,11 @@ export default function BookingListScreen() {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
+          <ResourceListItem
+            title={item.name}
+            subtitle={(item as any).location ?? "-"}
+            status="Available"
+            iconName={iconByType}
             onPress={() =>
               navigation.navigate("BookingDetail", {
                 data: item,
@@ -144,20 +148,7 @@ export default function BookingListScreen() {
                 end: endHM,
               })
             }
-            style={styles.row}
-          >
-            <View style={styles.leading}>
-              <MaterialCommunityIcons name={iconByType} size={20} color={BLUE} />
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>{item.name}</Text>
-              <Text style={styles.sub}>{(item as any).location ?? "-"}</Text>
-            </View>
-
-            <Text style={[styles.status, styles.ok]}>Available</Text>
-            <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
-          </TouchableOpacity>
+          />
         )}
       />
     </View>
@@ -178,34 +169,4 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   badgeText: { color: "#0b1220", fontWeight: "800", fontSize: 12 },
-  row: {
-    minHeight: 76,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e6eefc",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    shadowColor: BLUE,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  leading: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#eef4ff",
-    borderWidth: 1,
-    borderColor: "#d6e4ff",
-  },
-  title: { fontSize: 16, fontWeight: "800", color: "#0b1220" },
-  sub: { fontSize: 12, color: "#64748b" },
-  status: { fontSize: 12, fontWeight: "800", marginRight: 8 },
-  ok: { color: "#1f9d55" },
 });

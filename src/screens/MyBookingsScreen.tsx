@@ -1,8 +1,9 @@
 // src/screens/MyBookingsScreen.tsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import type { ResourceType } from "../types/env";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Asset } from "expo-asset";
 
 type Booking = {
   id: string;
@@ -10,15 +11,15 @@ type Booking = {
   resourceName: string;
   type: ResourceType;
   location?: string;
-  start: string; 
-  end: string;   
+  start: string;
+  end: string;
 };
 
 const BLUE = "#0d7ff2";
 const RED = "#ef4444";
 const GREY = "#94a3b8";
 
-// simple UTC formatter: "YYYY-MM-DD HH:mm"
+// formatter UTC "YYYY-MM-DD HH:mm"
 const fmt = (iso: string) => {
   const d = new Date(iso);
   const Y = d.getUTCFullYear();
@@ -32,36 +33,38 @@ const fmt = (iso: string) => {
 const HOURS24 = 24 * 3600 * 1000;
 
 export default function MyBookingsScreen() {
-  // mock data now; later fetch from Firebase
-  const [bookings, setBookings] = useState<Booking[]>([
-    {
-      id: "b1",
-      resourceId: "r3",
-      resourceName: "Meeting Room C",
-      type: "room",
-      location: "Building B - Floor 1",
-      start: "2025-10-28T09:00:00Z",
-      end:   "2025-10-28T11:00:00Z",
-    },
-    {
-      id: "b2",
-      resourceId: "p4",
-      resourceName: "Parking Spot 04",
-      type: "parking",
-      location: "Zone P2",
-      start: "2025-10-22T08:00:00Z",
-      end:   "2025-10-22T17:00:00Z",
-    },
-  ]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+
+  // تحميل البيانات من JSON المحلي
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const asset = Asset.fromModule(require("../mockData/mybookings.json"));
+        await asset.downloadAsync();
+        const uri = asset.localUri ?? asset.uri;
+        const res = await fetch(uri);
+        const json = await res.json();
+        if (alive) setBookings(json.bookings);
+      } catch {
+        const json = require("../mockData/mybookings.json");
+        if (alive) setBookings(json.bookings);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const now = Date.now();
 
   const sorted = useMemo(() => {
     const up: Booking[] = [];
     const past: Booking[] = [];
-    for (const b of bookings) (new Date(b.end).getTime() > now ? up : past).push(b);
-    up.sort((a,b)=>new Date(a.start).getTime()-new Date(b.start).getTime());
-    past.sort((a,b)=>new Date(b.start).getTime()-new Date(a.start).getTime());
+    for (const b of bookings)
+      (new Date(b.end).getTime() > now ? up : past).push(b);
+    up.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+    past.sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
     return { up, past };
   }, [bookings, now]);
 
@@ -114,13 +117,12 @@ export default function MyBookingsScreen() {
     </View>
   );
 
- return (
-  <SafeAreaView style={s.container} edges={["top"]}>
-    <Section title="Upcoming" data={sorted.up} />
-    <Section title="Past" data={sorted.past} />
-  </SafeAreaView>
-);
-
+  return (
+    <SafeAreaView style={s.container} edges={["top"]}>
+      <Section title="Upcoming" data={sorted.up} />
+      <Section title="Past" data={sorted.past} />
+    </SafeAreaView>
+  );
 }
 
 const s = StyleSheet.create({
@@ -146,14 +148,7 @@ const s = StyleSheet.create({
   title: { fontSize: 16, fontWeight: "800", color: "#0b1220" },
   sub: { fontSize: 12, color: "#64748b", marginTop: 2 },
   when: { fontSize: 12, color: "#0b1220", marginTop: 6, fontWeight: "600" },
-  cancelBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: RED,
-  },
-  cancelDisabled: {
-    backgroundColor: GREY,
-  },
+  cancelBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: RED },
+  cancelDisabled: { backgroundColor: GREY },
   cancelTxt: { color: "#fff", fontWeight: "800", fontSize: 12 },
 });

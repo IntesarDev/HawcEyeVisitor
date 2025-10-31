@@ -7,8 +7,8 @@ export type RootStackParamList = {
   BookingCalendar: { type: ResourceType };
   BookingList: { type: ResourceType; date: string; start: string; hours: number };
   BookingDetail: { data: Resource; date?: string; start?: string; end?: string };
+  About: undefined; // ← الإضافة
 };
-
 
 export type TabParamsList = {
   Home: undefined;
