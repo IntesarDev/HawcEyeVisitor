@@ -1,17 +1,4 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import ResourceBrowse from './src/screens/ResourceBrowse';
+// App.tsx
+import Root from "./src/components/Root";
 
-export default function App() {
-  return (
-    <SafeAreaView style={styles.container}>
-      <ResourceBrowse />
-      <StatusBar style="auto" />
-    </SafeAreaView>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-});
+export default function App() {return <Root />;}
