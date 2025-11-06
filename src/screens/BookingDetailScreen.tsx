@@ -1,18 +1,27 @@
 // src/screens/BookingDetailScreen.tsx
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Image, ScrollView } from "react-native";
-import { useRoute } from "@react-navigation/native";
+import { View, Text, StyleSheet, Image, ScrollView, Alert } from "react-native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
 import type { Resource } from "../types/env";
 import BookingButton from "../components/AppButton"; // الزر الجديد
+
+// NEW: Redux
+import { useAppDispatch } from "../store/hooks";
+import { addOne } from "../store/slices/bookings";
+import { resetCurrent } from "../store/slices/bookingDraft";
 
 const BLUE = "#0d7ff2";
 const CTA_H = 72;
 
 export default function BookingDetailScreen() {
-  const {params: { data, date, start, end },} = useRoute<RootStackNavProps<"BookingDetail">["route"]>();
+  const {
+    params: { data, date, start, end },
+  } = useRoute<RootStackNavProps<"BookingDetail">["route"]>();
+  const navigation = useNavigation();
+  const dispatch = useAppDispatch();
 
-  const item = data;
+  const item = data as Resource;
   const pricePerHour = (item as any).pricePerHour ?? 0;
 
   //دالة تحسب الوقت البدايه والنهايه حتى تعرف كم ساعه حجز المستخدم
@@ -24,7 +33,7 @@ export default function BookingDetailScreen() {
     dt.setUTCHours(hh, mm, 0, 0);
     return dt;
   };
-  
+
   //هنا يتم التحقق هل اختار كل شي
   const hasSelection = !!(date && start && end);
   //هنا يستدعي الدالة مال بيلد الفوك حتى يحسب التوتال مال الحجز 
@@ -44,19 +53,39 @@ export default function BookingDetailScreen() {
   );
 
   const canBook = !!(hasSelection && pricePerHour > 0 && hoursInt != null);
+
   //الوظيفة اللي تصير لما المستخدم يضغط على الزر يرجع بالكونزوله كلام مؤقت
   const onBook = () => {
     if (!canBook) return;
-    console.log("Book now:", {
-      id: item.id,
-      type: item.type,
-      date,
-      start,
-      end,
-      hours: hoursInt,
-      pricePerHour,
-      total,
-    });
+
+    const s = buildUTC(date, start)!;
+    const e = buildUTC(date, end)!;
+
+    // NEW: خزّن الحجز في Redux
+    const genId = () => Math.random().toString(36).slice(2);
+    const id = genId();
+
+    dispatch(
+      addOne({
+        id,
+        resourceId: String((item as any).id ?? id),
+        resourceName: (item as any).name ?? "Resource",
+        type: (item as any).type,
+        location: (item as any).location,
+        start: s.toISOString(),
+        end: e.toISOString(),
+        pricePerHour,
+        total: total ?? undefined,
+      })
+    );
+
+    // NEW: امسح فقط مسودة النوع الحالي
+    dispatch(resetCurrent());
+
+    Alert.alert("Booked", "Your booking has been added.");
+    // NEW: ارجع لقائمة حجوزاتي
+    // @ts-ignore
+    navigation.navigate("MyBookings");
   };
 
   return (
@@ -65,16 +94,22 @@ export default function BookingDetailScreen() {
         style={s.wrap}
         contentContainerStyle={[s.cc, { paddingBottom: CTA_H + 24 }]}
       >
-        {!!item.image && (
-          <Image source={{ uri: item.image }} style={s.img} resizeMode="cover" />
+        {!!(item as any).image && (
+          <Image
+            source={{ uri: (item as any).image }}
+            style={s.img}
+            resizeMode="cover"
+          />
         )}
 
         <View style={s.header}>
-          <Text style={s.title}>{item.name}</Text>
+          <Text style={s.title}>{(item as any).name}</Text>
           {(item as any).location ? (
             <Text style={s.sub}>{(item as any).location}</Text>
           ) : null}
-          {item.description ? <Text style={s.desc}>{item.description}</Text> : null}
+          {(item as any).description ? (
+            <Text style={s.desc}>{(item as any).description}</Text>
+          ) : null}
           {hasSelection && (
             <Text style={s.hint}>
               {date} • {start} → {end}
@@ -82,7 +117,7 @@ export default function BookingDetailScreen() {
           )}
         </View>
 
-        {item.type === "room" && (
+        {((item as any).type === "room") && (
           <Section title="Room Info">
             <Row label="Capacity" value={String((item as any).capacity ?? "-")} />
             <Row
@@ -96,7 +131,7 @@ export default function BookingDetailScreen() {
           </Section>
         )}
 
-        {item.type === "car" && (
+        {((item as any).type === "car") && (
           <Section title="Car Info">
             <Row label="Plate" value={(item as any).plate ?? "-"} />
             <Row label="Fuel" value={(item as any).fuel ?? "-"} />
@@ -104,19 +139,13 @@ export default function BookingDetailScreen() {
               label="Range"
               value={(item as any).rangeKm ? `${(item as any).rangeKm} km` : "-"}
             />
-            <Row
-              label="Last service"
-              value={(item as any).lastService ?? "-"}
-            />
+            <Row label="Last service" value={(item as any).lastService ?? "-"} />
           </Section>
         )}
 
-        {item.type === "parking" && (
+        {((item as any).type === "parking") && (
           <Section title="Parking Info">
-            <Row
-              label="Covered"
-              value={(item as any).covered ? "Yes" : "No"}
-            />
+            <Row label="Covered" value={(item as any).covered ? "Yes" : "No"} />
             <Row
               label="EV charger"
               value={(item as any).evCharger ? "Yes" : "No"}
@@ -142,11 +171,7 @@ export default function BookingDetailScreen() {
       </ScrollView>
 
       <View style={s.ctaWrap}>
-        <BookingButton
-          label="Book now"
-          disabled={!canBook}
-          onPress={onBook}
-        />
+        <BookingButton label="Book now" disabled={!canBook} onPress={onBook} />
       </View>
     </View>
   );

@@ -1,9 +1,12 @@
 // src/screens/ProfileScreen.tsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import AppButton from "../components/AppButton";
 import MaterialCommunityIcons from "@expo/vector-icons/build/MaterialCommunityIcons";
-import { Asset } from "expo-asset";
+
+// Redux
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { logout } from "../store/slices/auth";
 
 const BLUE = "#0d7ff2";
 
@@ -23,49 +26,43 @@ function Tagline() {
     return () => loop.stop();
   }, [o]);
   const translateY = o.interpolate({ inputRange: [0, 1], outputRange: [8, 0] });
-  return <Animated.Text style={[s.tagline, { opacity: o, transform: [{ translateY }] }]}>Book · Manage · Go</Animated.Text>;
+  return (
+    <Animated.Text style={[s.tagline, { opacity: o, transform: [{ translateY }] }]}>
+      Book · Manage · Go
+    </Animated.Text>
+  );
 }
 
-type User = { name: string; email: string };
-
 export default function ProfileScreen() {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const asset = Asset.fromModule(require("../mockData/user.json"));
-        await asset.downloadAsync();
-        const uri = asset.localUri ?? asset.uri;
-        const res = await fetch(uri);
-        const json = (await res.json()) as User;
-        if (alive) setUser(json);
-      } catch {
-        const json = require("../mockData/user.json") as User;
-        if (alive) setUser(json);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // المستخدم من الريدكس بدل JSON
+  const user = useAppSelector((st) => st.auth.user);
+  const dispatch = useAppDispatch();
 
   const handleLogout = () => {
-    console.log("User logged out");
+    // يفرغ auth ويعيدك تلقائيًا لشاشة الدخول عبر Gate في Root
+    dispatch(logout());
   };
 
   return (
     <View style={s.container}>
       {/* بطاقة المستخدم */}
       <View style={s.card}>
-        <MaterialCommunityIcons name="account-circle-outline" size={64} color="#94a3b8" style={{ marginBottom: 12 }} />
+        <MaterialCommunityIcons
+          name="shield-account"      // أيقونة أجمل
+          size={72}
+          color={BLUE}
+          style={{ marginBottom: 12 }}
+        />
         <Text style={s.name}>{user?.name ?? "—"}</Text>
         <Text style={s.email}>{user?.email ?? "—"}</Text>
       </View>
 
       {/* زر تسجيل الخروج */}
-      <AppButton label="Log out" onPress={handleLogout} style={{ width: "90%", height: 64, borderRadius: 18, marginTop: 36 }} />
+      <AppButton
+        label="Log out"
+        onPress={handleLogout}
+        style={{ width: "90%", height: 64, borderRadius: 18, marginTop: 36 }}
+      />
 
       <View style={{ flex: 1 }} />
 

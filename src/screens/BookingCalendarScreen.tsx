@@ -1,29 +1,51 @@
 // src/screens/BookingCalendarScreen.tsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useEffect } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
+
 import BookingCalendar from "../components/BookingCalendar";
 import DurationPicker from "../components/DurationPicker";
 import StartTimePicker from "../components/StartTimePicker";
 import BookingButton from "../components/AppButton";
 
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { setType, setDate, setStart, setHours } from "../store/slices/bookingDraft";
+
 const LIGHT_BLUE = "#eaf3ff";
+const DEFAULT_DRAFT = { date: "", start: null as string | null, hours: 1 };
 
 export default function BookingCalendarScreen() {
   const navigation = useNavigation<RootStackNavProps<"BookingCalendar">["navigation"]>();
-  const { params: { type } } = useRoute<RootStackNavProps<"BookingCalendar">["route"]>();
+  const { params: { type } } = useRoute<RootStackNavProps<"BookingCalendar">["route"]>(); // 'room' | 'car' | 'parking'
 
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [start, setStart] = useState<string | null>(null);
-  const [hours, setHours] = useState<number>(1);
+  const dispatch = useAppDispatch();
 
-  const typeLabel = useMemo(() => (type === "room" ? "Meeting Hall" : type === "car" ? "Car" : "Parking"), [type]);
-  const canContinue = !!selectedDate && !!start && hours > 0;
+  // ثبّت نوع المورد داخل الريدكس
+  useEffect(() => {
+    dispatch(setType(type));
+  }, [type, dispatch]);
+
+  // اقرأ الجذر أولًا ثم اشتق مسودة هذا النوع مع فولباك آمن
+  const draftRoot = useAppSelector(s => s.bookingDraft);
+  const draftForType = (draftRoot?.byType?.[type]) ?? DEFAULT_DRAFT;
+
+
+  const typeLabel = useMemo(
+    () => (type === "room" ? "Meeting Hall" : type === "car" ? "Car" : "Parking"),
+    [type]
+  );
+
+  const canContinue = !!draftForType.date && !!draftForType.start && draftForType.hours > 0;
 
   const onContinue = () => {
     if (!canContinue) return;
-    navigation.navigate("BookingList", { type, date: selectedDate, start: start!, hours });
+    navigation.navigate("BookingList", {
+      type,
+      date: draftForType.date,
+      start: draftForType.start!,
+      hours: draftForType.hours,
+    });
   };
 
   return (
@@ -31,20 +53,32 @@ export default function BookingCalendarScreen() {
       <Text style={s.header}>Choose {typeLabel} date</Text>
 
       {/* اختيار التاريخ */}
-      <BookingCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+      <BookingCalendar
+        selectedDate={draftForType.date}
+        onSelectDate={(d) => dispatch(setDate({ type, date: d }))}
+      />
 
       {/* اختيار وقت البداية */}
-      <StartTimePicker value={start} onChange={setStart} step={30} />
+      <StartTimePicker
+        value={draftForType.start}
+        onChange={(v) => dispatch(setStart({ type, start: v }))}
+        step={30}
+      />
 
       {/* اختيار المدة */}
-      <DurationPicker hours={hours} onChange={setHours} step={1} min={1} />
+      <DurationPicker
+        hours={draftForType.hours}
+        onChange={(h) => dispatch(setHours({ type, hours: h }))}
+        step={1}
+        min={1}
+      />
 
       {/* زر المتابعة */}
       <BookingButton
         label={canContinue ? "Continue" : "Select date, start, duration"}
         disabled={!canContinue}
         onPress={onContinue}
-        style={{ marginTop: 12 }}
+        style={{ marginTop: 1 }}
       />
     </View>
   );

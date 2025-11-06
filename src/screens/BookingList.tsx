@@ -7,6 +7,9 @@ import type { Resource } from "../types/env";
 import { Asset } from "expo-asset";
 import ResourceListItem from "../components/ResourceListItem";
 
+// +++ NEW: قراءة المسودة من الريدكس للفولباك عند غياب الباراميترات
+import { useAppSelector } from "../store/hooks";
+
 const BLUE = "#0d7ff2";
 
 /** تداخل نطاقين تاريخ-وقت */
@@ -28,13 +31,24 @@ const fmtHM = (d: Date) =>
 
 export default function BookingListScreen() {
   const navigation = useNavigation<RootStackNavProps<"BookingList">["navigation"]>();
-  const { type: currentType, date, start, hours } =
-    useRoute<RootStackNavProps<"BookingList">["route"]>().params as {
-      type: "room" | "car" | "parking";
-      date: string;
-      start: string;
-      hours: number;
-    };
+
+  // نقرأ الباراميترات إن وُجدت
+  const route = useRoute<RootStackNavProps<"BookingList">["route"]>();
+  const params = route.params as
+    | { type: "room" | "car" | "parking"; date: string; start: string; hours: number }
+    | undefined;
+
+  // +++ NEW: فولباك من Redux draft-byType إذا ما وصلت باراميترات لأي سبب
+  const draft = useAppSelector((s) => s.bookingDraft);
+  const currentType: "room" | "car" | "parking" =
+    (params?.type as any) ?? (draft.type as any) ?? "room";
+
+  // مسودة النوع الحالي فقط
+  const draftForType = useAppSelector((s) => s.bookingDraft.byType[currentType]);
+
+  const date: string = params?.date ?? draftForType.date ?? "";
+  const start: string = params?.start ?? (draftForType.start ?? "00:00");
+  const hours: number = params?.hours ?? draftForType.hours ?? 1;
 
   const [resources, setResources] = useState<Resource[]>([]);
 
@@ -88,7 +102,7 @@ export default function BookingListScreen() {
         const bookings = (r as any).bookings as { from: string; to: string }[] | undefined;
         const hasOverlap =
           Array.isArray(bookings) &&
-          bookings.some(b => overlapsRange(startDT, endDT, new Date(b.from), new Date(b.to)));
+          bookings.some((b) => overlapsRange(startDT, endDT, new Date(b.from), new Date(b.to)));
         if (!hasOverlap) {
           const updated = { ...(r as any), availabilityNow: "Available" as const } as Resource;
           out.push(updated);
@@ -102,7 +116,7 @@ export default function BookingListScreen() {
         const wantS = start;
         const wantE = fmtHM(endDT);
         const busy =
-          Array.isArray(bookingsToday) && bookingsToday.some(b => overlapsHH(wantS, wantE, b.from, b.to));
+          Array.isArray(bookingsToday) && bookingsToday.some((b) => overlapsHH(wantS, wantE, b.from, b.to));
         if (!busy) {
           const updatedRoom = { ...(r as any), availabilityNow: "Available" as const } as Resource;
           out.push(updatedRoom);

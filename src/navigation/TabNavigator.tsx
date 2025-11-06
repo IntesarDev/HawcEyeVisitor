@@ -12,8 +12,7 @@ const Tab = createBottomTabNavigator<TabParamsList>();
 export default function TabNavigator() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
+      screenOptions={{      
         tabBarActiveTintColor: "#0d7ff2",
       }}
     >
@@ -21,6 +20,7 @@ export default function TabNavigator() {
         name="Home"
         component={RootStackNavigator}
         options={{
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="home" color={color} size={size} />
           ),
