@@ -21,7 +21,6 @@ const schema = Yup.object({
 
 export default function RegisterScreen() {
   const nav = useNavigation();
-  // الحالة الصحيحة: true => مخفي، false => ظاهر
   const [hidePass, setHidePass] = useState(true);
   const [hideConfirm, setHideConfirm] = useState(true);
 
@@ -38,10 +37,8 @@ export default function RegisterScreen() {
           initialValues={{ name: "", email: "", password: "", confirm: "" }}
           validationSchema={schema}
           onSubmit={(v, { setSubmitting, resetForm }) => {
-            // TODO: استدعِ API التسجيل
             resetForm();
             setSubmitting(false);
-            // ارجاع المستخدم إلى شاشة تسجيل الدخول
             // @ts-ignore
             nav.navigate("Login");
           }}
@@ -54,115 +51,126 @@ export default function RegisterScreen() {
             errors,
             touched,
             isSubmitting,
-          }) => (
-            <>
-              <View style={s.field}>
-                <Text style={s.label}>Full name</Text>
-                <TextInput
-                  style={[s.input, touched.name && errors.name ? s.inputErr : null]}
-                  placeholder="John Doe"
-                  placeholderTextColor="#94a3b8"
-                  value={values.name}
-                  onChangeText={handleChange("name")}
-                  onBlur={handleBlur("name")}
-                />
-                {touched.name && errors.name ? <Text style={s.err}>{errors.name}</Text> : null}
-              </View>
+          }) => {
+            const isValid =
+              values.name.trim() !== "" &&
+              values.email.trim() !== "" &&
+              values.password.trim() !== "" &&
+              values.confirm.trim() !== "" &&
+              !errors.name &&
+              !errors.email &&
+              !errors.password &&
+              !errors.confirm;
 
-              <View style={s.field}>
-                <Text style={s.label}>Email</Text>
-                <TextInput
-                  style={[s.input, touched.email && errors.email ? s.inputErr : null]}
-                  placeholder="you@example.com"
-                  placeholderTextColor="#94a3b8"
-                  value={values.email}
-                  onChangeText={handleChange("email")}
-                  onBlur={handleBlur("email")}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
-                {touched.email && errors.email ? <Text style={s.err}>{errors.email}</Text> : null}
-              </View>
-
-              {/* Password */}
-              <View style={s.field}>
-                <Text style={s.label}>Password</Text>
-                <View style={s.inputWrap}>
+            return (
+              <>
+                <View style={s.field}>
+                  <Text style={s.label}>Full name</Text>
                   <TextInput
-                    style={[
-                      s.input,
-                      s.inputWithIcon,
-                      touched.password && errors.password ? s.inputErr : null,
-                    ]}
-                    placeholder="••••••••"
+                    style={[s.input, touched.name && errors.name ? s.inputErr : null]}
+                    placeholder="John Doe"
                     placeholderTextColor="#94a3b8"
-                    value={values.password}
-                    onChangeText={handleChange("password")}
-                    onBlur={handleBlur("password")}
-                    secureTextEntry={hidePass} // true = مخفي
+                    value={values.name}
+                    onChangeText={handleChange("name")}
+                    onBlur={handleBlur("name")}
                   />
-                  <TouchableOpacity
-                    onPress={() => setHidePass(!hidePass)}
-                    style={s.eyeBtn}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <MaterialCommunityIcons
-                      // عين مع خط عندما النص مخفي، عين مفتوحة عندما ظاهر
-                      name={hidePass ? "eye-off-outline" : "eye-outline"}
-                      size={22}
-                      color="#64748b"
-                    />
-                  </TouchableOpacity>
+                  {touched.name && errors.name ? <Text style={s.err}>{errors.name}</Text> : null}
                 </View>
-                {touched.password && errors.password ? <Text style={s.err}>{errors.password}</Text> : null}
-              </View>
 
-              {/* Confirm password */}
-              <View style={s.field}>
-                <Text style={s.label}>Confirm password</Text>
-                <View style={s.inputWrap}>
+                <View style={s.field}>
+                  <Text style={s.label}>Email</Text>
                   <TextInput
-                    style={[
-                      s.input,
-                      s.inputWithIcon,
-                      touched.confirm && errors.confirm ? s.inputErr : null,
-                    ]}
-                    placeholder="••••••••"
+                    style={[s.input, touched.email && errors.email ? s.inputErr : null]}
+                    placeholder="you@example.com"
                     placeholderTextColor="#94a3b8"
-                    value={values.confirm}
-                    onChangeText={handleChange("confirm")}
-                    onBlur={handleBlur("confirm")}
-                    secureTextEntry={hideConfirm}
+                    value={values.email}
+                    onChangeText={handleChange("email")}
+                    onBlur={handleBlur("email")}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
                   />
-                  <TouchableOpacity
-                    onPress={() => setHideConfirm(!hideConfirm)}
-                    style={s.eyeBtn}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <MaterialCommunityIcons
-                      name={hideConfirm ? "eye-off-outline" : "eye-outline"}
-                      size={22}
-                      color="#64748b"
-                    />
-                  </TouchableOpacity>
+                  {touched.email && errors.email ? <Text style={s.err}>{errors.email}</Text> : null}
                 </View>
-                {touched.confirm && errors.confirm ? <Text style={s.err}>{errors.confirm}</Text> : null}
-              </View>
 
-              <AppButton
-                label="Create account"
-                onPress={() => handleSubmit()}
-                disabled={isSubmitting}
-                style={s.btn}
-              />
+                {/* Password */}
+                <View style={s.field}>
+                  <Text style={s.label}>Password</Text>
+                  <View style={s.inputWrap}>
+                    <TextInput
+                      style={[
+                        s.input,
+                        s.inputWithIcon,
+                        touched.password && errors.password ? s.inputErr : null,
+                      ]}
+                      placeholder="••••••••"
+                      placeholderTextColor="#94a3b8"
+                      value={values.password}
+                      onChangeText={handleChange("password")}
+                      onBlur={handleBlur("password")}
+                      secureTextEntry={hidePass}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setHidePass(!hidePass)}
+                      style={s.eyeBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <MaterialCommunityIcons
+                        name={hidePass ? "eye-off-outline" : "eye-outline"}
+                        size={22}
+                        color="#64748b"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {touched.password && errors.password ? <Text style={s.err}>{errors.password}</Text> : null}
+                </View>
 
-              <Text style={s.footer}>
-                Already have an account?
-                <Text style={s.link} onPress={() => nav.navigate("Login" as never)}> Sign in</Text>
-              </Text>
-            </>
-          )}
+                {/* Confirm password */}
+                <View style={s.field}>
+                  <Text style={s.label}>Confirm password</Text>
+                  <View style={s.inputWrap}>
+                    <TextInput
+                      style={[
+                        s.input,
+                        s.inputWithIcon,
+                        touched.confirm && errors.confirm ? s.inputErr : null,
+                      ]}
+                      placeholder="••••••••"
+                      placeholderTextColor="#94a3b8"
+                      value={values.confirm}
+                      onChangeText={handleChange("confirm")}
+                      onBlur={handleBlur("confirm")}
+                      secureTextEntry={hideConfirm}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setHideConfirm(!hideConfirm)}
+                      style={s.eyeBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <MaterialCommunityIcons
+                        name={hideConfirm ? "eye-off-outline" : "eye-outline"}
+                        size={22}
+                        color="#64748b"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {touched.confirm && errors.confirm ? <Text style={s.err}>{errors.confirm}</Text> : null}
+                </View>
+
+                <AppButton
+                  label="Create account"
+                  onPress={() => handleSubmit()}
+                  disabled={!isValid || isSubmitting}
+                  style={s.btn}
+                />
+
+                <Text style={s.footer}>
+                  Already have an account?
+                  <Text style={s.link} onPress={() => nav.navigate("Login" as never)}> Sign in</Text>
+                </Text>
+              </>
+            );
+          }}
         </Formik>
       </View>
     </KeyboardAvoidingView>

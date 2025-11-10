@@ -62,84 +62,92 @@ export default function LoginScreen() {
             errors,
             touched,
             isSubmitting,
-          }) => (
-            <>
-              {/* Email */}
-              <View style={s.field}>
-                <Text style={s.label}>Email</Text>
-                <TextInput
-                  style={[s.input, touched.email && errors.email ? s.inputErr : null]}
-                  placeholder="you@example.com"
-                  placeholderTextColor="#94a3b8"
-                  value={values.email}
-                  onChangeText={handleChange("email")}
-                  onBlur={handleBlur("email")}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  textContentType="emailAddress"
-                />
-                {touched.email && errors.email ? (
-                  <Text style={s.err}>{errors.email}</Text>
-                ) : null}
-              </View>
+          }) => {
+            const isValid =
+              values.email.trim() !== "" &&
+              values.password.trim() !== "" &&
+              !errors.email &&
+              !errors.password;
 
-              {/* Password + eye inside input */}
-              <View style={s.field}>
-                <Text style={s.label}>Password</Text>
-                <View style={s.inputWrap}>
+            return (
+              <>
+                {/* Email */}
+                <View style={s.field}>
+                  <Text style={s.label}>Email</Text>
                   <TextInput
-                    style={[
-                      s.input,
-                      s.inputWithIcon,
-                      touched.password && errors.password ? s.inputErr : null,
-                    ]}
-                    placeholder="••••••••"
+                    style={[s.input, touched.email && errors.email ? s.inputErr : null]}
+                    placeholder="you@example.com"
                     placeholderTextColor="#94a3b8"
-                    value={values.password}
-                    onChangeText={handleChange("password")}
-                    onBlur={handleBlur("password")}
-                    secureTextEntry={hidePass} // true = مخفي
-                    autoComplete="password"
-                    textContentType="password"
+                    value={values.email}
+                    onChangeText={handleChange("email")}
+                    onBlur={handleBlur("email")}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    textContentType="emailAddress"
                   />
-                  <TouchableOpacity
-                    onPress={() => setHidePass(!hidePass)}
-                    style={s.eyeBtn}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <MaterialCommunityIcons
-                      // عين مع خط عندما النص مخفي، عين مفتوحة عندما ظاهر
-                      name={hidePass ? "eye-off-outline" : "eye-outline"}
-                      size={22}
-                      color="#64748b"
-                    />
-                  </TouchableOpacity>
+                  {touched.email && errors.email ? (
+                    <Text style={s.err}>{errors.email}</Text>
+                  ) : null}
                 </View>
-                {touched.password && errors.password ? (
-                  <Text style={s.err}>{errors.password}</Text>
-                ) : null}
-              </View>
 
-              <AppButton
-                label="Sign in"
-                onPress={() => handleSubmit()}
-                disabled={isSubmitting}
-                style={s.btn}
-              />
+                {/* Password + eye inside input */}
+                <View style={s.field}>
+                  <Text style={s.label}>Password</Text>
+                  <View style={s.inputWrap}>
+                    <TextInput
+                      style={[
+                        s.input,
+                        s.inputWithIcon,
+                        touched.password && errors.password ? s.inputErr : null,
+                      ]}
+                      placeholder="••••••••"
+                      placeholderTextColor="#94a3b8"
+                      value={values.password}
+                      onChangeText={handleChange("password")}
+                      onBlur={handleBlur("password")}
+                      secureTextEntry={hidePass} // true = مخفي
+                      autoComplete="password"
+                      textContentType="password"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setHidePass(!hidePass)}
+                      style={s.eyeBtn}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <MaterialCommunityIcons
+                        // عين مع خط عندما النص مخفي، عين مفتوحة عندما ظاهر
+                        name={hidePass ? "eye-off-outline" : "eye-outline"}
+                        size={22}
+                        color="#64748b"
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {touched.password && errors.password ? (
+                    <Text style={s.err}>{errors.password}</Text>
+                  ) : null}
+                </View>
 
-              <Text style={s.footer}>
-                Don’t have an account?
-                <Text
-                  style={s.link}
-                  onPress={() => nav.navigate("Register" as never)}
-                >
-                  {" "}
-                  Create one
+                <AppButton
+                  label="Sign in"
+                  onPress={() => handleSubmit()}
+                  disabled={!isValid || isSubmitting}
+                  style={s.btn}
+                />
+
+                <Text style={s.footer}>
+                  Don’t have an account?
+                  <Text
+                    style={s.link}
+                    onPress={() => nav.navigate("Register" as never)}
+                  >
+                    {" "}
+                    Create one
+                  </Text>
                 </Text>
-              </Text>
-            </>
-          )}
+              </>
+            );
+          }}
         </Formik>
       </View>
     </KeyboardAvoidingView>

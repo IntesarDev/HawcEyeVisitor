@@ -1,7 +1,7 @@
 // src/screens/BookingDetailScreen.tsx
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet, Image, ScrollView, Alert } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import { useRoute, useNavigation, StackActions } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
 import type { Resource } from "../types/env";
 import BookingButton from "../components/AppButton"; // الزر الجديد
@@ -69,7 +69,11 @@ export default function BookingDetailScreen() {
     dispatch(resetCurrent());
 
     Alert.alert("Booked", "Your booking has been added.");
-    // ارجع لقائمة حجوزاتي (تبقى كما هي إن كانت موجودة في النافيجेशन)
+
+    // ← يرجع لكل الشاشات السابقة للبداية (يفرغ الـstack)
+    navigation.dispatch(StackActions.popToTop());
+
+    // ← بعدها ينتقل إلى صفحة الحجوزات
     // @ts-ignore
     navigation.navigate("MyBookings");
   };

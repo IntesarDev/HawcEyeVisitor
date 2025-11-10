@@ -17,7 +17,7 @@ const DATA: Row[] = [
 
 const LIGHT_BLUE = "#eaf3ff";
 const BLUE = "#0d7ff2";
-const LOGO_SIZE = 200;
+const LOGO_SIZE = 300;
 
 // logo
 function HawcVisitorTitle() {
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     gap: 12,
     flexGrow: 1,
     justifyContent: "flex-start",
-    paddingTop: 150,
+    paddingTop: 230,
     paddingBottom: 8,
   },
 
