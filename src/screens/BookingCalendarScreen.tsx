@@ -9,7 +9,7 @@ import DurationPicker from "../components/DurationPicker";
 import StartTimePicker from "../components/StartTimePicker";
 import BookingButton from "../components/AppButton";
 
-import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
 import { setType, setDate, setStart, setHours } from "../store/slices/bookingDraft";
 
 const LIGHT_BLUE = "#eaf3ff";

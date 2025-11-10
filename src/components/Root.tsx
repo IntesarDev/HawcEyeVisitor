@@ -7,7 +7,7 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 
 import { store, persistor } from '../store';
-import { useAppSelector } from '../store/hooks';
+import { useAppSelector } from '../hooks/reduxHooks';
 
 import TabNavigator from '../navigation/TabNavigator';
 import AuthStackNavigator from '../navigation/AuthStackNavigator';
@@ -19,14 +19,14 @@ function Gate() {
 
 export default function Root() {
   return (
+    <SafeAreaProvider>
     <Provider store={store}>
       <PersistGate loading={<ActivityIndicator />} persistor={persistor}>
-        <SafeAreaProvider>
           <NavigationContainer>
             <Gate />
           </NavigationContainer>
-        </SafeAreaProvider>
       </PersistGate>
     </Provider>
+    </SafeAreaProvider>
   );
 }

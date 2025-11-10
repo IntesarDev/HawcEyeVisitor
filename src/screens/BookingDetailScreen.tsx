@@ -6,9 +6,8 @@ import type { RootStackNavProps } from "../navigation/types";
 import type { Resource } from "../types/env";
 import BookingButton from "../components/AppButton"; // الزر الجديد
 
-// NEW: Redux
-import { useAppDispatch } from "../store/hooks";
-import { addOne } from "../store/slices/bookings";
+// Redux: نُبقي فقط ما يخص مسودة الحجز
+import { useAppDispatch } from "../hooks/reduxHooks";
 import { resetCurrent } from "../store/slices/bookingDraft";
 
 const BLUE = "#0d7ff2";
@@ -24,7 +23,7 @@ export default function BookingDetailScreen() {
   const item = data as Resource;
   const pricePerHour = (item as any).pricePerHour ?? 0;
 
-  //دالة تحسب الوقت البدايه والنهايه حتى تعرف كم ساعه حجز المستخدم
+  // دالة تحسب وقت البداية والنهاية لتحديد عدد الساعات
   const buildUTC = (d?: string, hm?: string) => {
     if (!d || !hm) return null;
     const [hh, mm] = hm.split(":").map((n) => parseInt(String(n), 10));
@@ -34,9 +33,10 @@ export default function BookingDetailScreen() {
     return dt;
   };
 
-  //هنا يتم التحقق هل اختار كل شي
+  // تحقق من الاكتمال
   const hasSelection = !!(date && start && end);
-  //هنا يستدعي الدالة مال بيلد الفوك حتى يحسب التوتال مال الحجز 
+
+  // عدد الساعات
   const hoursInt = useMemo(() => {
     if (!hasSelection) return null;
     const s = buildUTC(date, start);
@@ -47,6 +47,7 @@ export default function BookingDetailScreen() {
     return diffMs / 3_600_000;
   }, [hasSelection, date, start, end]);
 
+  // الإجمالي
   const total = useMemo(
     () => (hoursInt == null ? null : hoursInt * pricePerHour),
     [hoursInt, pricePerHour]
@@ -54,36 +55,21 @@ export default function BookingDetailScreen() {
 
   const canBook = !!(hasSelection && pricePerHour > 0 && hoursInt != null);
 
-  //الوظيفة اللي تصير لما المستخدم يضغط على الزر يرجع بالكونزوله كلام مؤقت
+  // عند الحجز
   const onBook = () => {
     if (!canBook) return;
 
     const s = buildUTC(date, start)!;
     const e = buildUTC(date, end)!;
 
-    // NEW: خزّن الحجز في Redux
-    const genId = () => Math.random().toString(36).slice(2);
-    const id = genId();
+    // تم حذف تخزين الحجز في Redux (bookings)
+    // هنا مكان استدعاء API لاحقًا لإرسال الحجز إلى السيرفر
 
-    dispatch(
-      addOne({
-        id,
-        resourceId: String((item as any).id ?? id),
-        resourceName: (item as any).name ?? "Resource",
-        type: (item as any).type,
-        location: (item as any).location,
-        start: s.toISOString(),
-        end: e.toISOString(),
-        pricePerHour,
-        total: total ?? undefined,
-      })
-    );
-
-    // NEW: امسح فقط مسودة النوع الحالي
+    // امسح فقط مسودة النوع الحالي
     dispatch(resetCurrent());
 
     Alert.alert("Booked", "Your booking has been added.");
-    // NEW: ارجع لقائمة حجوزاتي
+    // ارجع لقائمة حجوزاتي (تبقى كما هي إن كانت موجودة في النافيجेशन)
     // @ts-ignore
     navigation.navigate("MyBookings");
   };
@@ -177,7 +163,7 @@ export default function BookingDetailScreen() {
   );
 }
 
-// دالة فكرتها تنظّم شكل كل قسم في الصفحة،
+// تنظيم الأقسام
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={s.section}>
@@ -186,7 +172,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </View>
   );
 }
-// هو لبنة أساسية تبني بيها محتوى الأقسام بطريقة مرتبة.
+
+// صف داخل القسم
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <View style={s.row}>

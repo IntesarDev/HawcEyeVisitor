@@ -1,14 +1,6 @@
 // src/screens/RegisterScreen.tsx
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableOpacity,
-} from "react-native";
+import {View,Text,TextInput,StyleSheet,KeyboardAvoidingView,Platform,TouchableOpacity,} from "react-native";
 import { Formik } from "formik";
 import * as Yup from "yup";
 import AppButton from "../components/AppButton";

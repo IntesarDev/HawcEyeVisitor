@@ -1,23 +1,44 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+// نوع المستخدم
 export type User = { id: string; name: string; email: string };
 
-type State = {
+// الحالة المبدئية للمصادقة
+type AuthState = {
   isLoggedIn: boolean;
   user: User | null;
 };
 
-const initialState: State = { isLoggedIn: false, user: null };
+const initialState: AuthState = {
+  isLoggedIn: false,
+  user: null,
+};
 
-const slice = createSlice({
-  name: 'auth',
+// تعريف slice خاص بالمصادقة
+const authSlice = createSlice({
+  name: "auth",
   initialState,
   reducers: {
-    login: (s, a: PayloadAction<User>) => { s.isLoggedIn = true; s.user = a.payload; },
-    logout: (s) => { s.isLoggedIn = false; s.user = null; },
-    setUser: (s, a: PayloadAction<User | null>) => { s.user = a.payload; s.isLoggedIn = !!a.payload; },
-  }
+    // تسجيل الدخول
+    login(state, action: PayloadAction<User>) {
+      state.isLoggedIn = true;
+      state.user = action.payload;
+    },
+
+    // تسجيل الخروج
+    logout(state) {
+      state.isLoggedIn = false;
+      state.user = null;
+    },
+
+    // تحديث بيانات المستخدم
+    setUser(state, action: PayloadAction<User | null>) {
+      state.user = action.payload;
+      state.isLoggedIn = !!action.payload;
+    },
+  },
 });
 
-export const { login, logout, setUser } = slice.actions;
-export default slice.reducer;
+// المغيرات والمقلّد
+export const { login, logout, setUser } = authSlice.actions;
+export default authSlice.reducer;

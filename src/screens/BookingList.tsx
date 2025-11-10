@@ -8,7 +8,7 @@ import { Asset } from "expo-asset";
 import ResourceListItem from "../components/ResourceListItem";
 
 // +++ NEW: قراءة المسودة من الريدكس للفولباك عند غياب الباراميترات
-import { useAppSelector } from "../store/hooks";
+import { useAppSelector } from "../hooks/reduxHooks";
 
 const BLUE = "#0d7ff2";
 

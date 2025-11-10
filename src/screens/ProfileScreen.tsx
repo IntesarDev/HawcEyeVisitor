@@ -5,7 +5,7 @@ import AppButton from "../components/AppButton";
 import MaterialCommunityIcons from "@expo/vector-icons/build/MaterialCommunityIcons";
 
 // Redux
-import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
 import { logout } from "../store/slices/auth";
 
 const BLUE = "#0d7ff2";
@@ -48,7 +48,7 @@ export default function ProfileScreen() {
       {/* بطاقة المستخدم */}
       <View style={s.card}>
         <MaterialCommunityIcons
-          name="shield-account"      // أيقونة أجمل
+          name="account-circle"     
           size={72}
           color={BLUE}
           style={{ marginBottom: 12 }}

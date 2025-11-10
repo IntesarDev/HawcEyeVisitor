@@ -12,7 +12,7 @@ import {
 import { Formik } from "formik";
 import * as Yup from "yup";
 import AppButton from "../components/AppButton";
-import { useAppDispatch } from "../store/hooks";
+import { useAppDispatch } from "../hooks/reduxHooks";
 import { login } from "../store/slices/auth";
 import { useNavigation } from "@react-navigation/native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
