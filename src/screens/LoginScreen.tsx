@@ -1,13 +1,6 @@
 // src/screens/LoginScreen.tsx
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableOpacity,
+import React, { useState, useRef, useEffect } from "react";
+import {View,Text,TextInput,StyleSheet,KeyboardAvoidingView,Platform,TouchableOpacity,Animated,
 } from "react-native";
 import { Formik } from "formik";
 import * as Yup from "yup";
@@ -19,6 +12,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const BLUE = "#0d7ff2";
 const BG = "#f9fafb";
+const LOGO_SIZE = 300;
 
 const schema = Yup.object({
   email: Yup.string().email("Invalid email").required("Email is required"),
@@ -28,16 +22,40 @@ const schema = Yup.object({
 export default function LoginScreen() {
   const dispatch = useAppDispatch();
   const nav = useNavigation();
-  // true = مخفي، false = ظاهر
   const [hidePass, setHidePass] = useState(true);
+
+  // حركة اللوغو
+  const tilt = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(tilt, { toValue: 1, duration: 2000, useNativeDriver: true }),
+        Animated.timing(tilt, { toValue: 0, duration: 2000, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [tilt]);
+  const rotate = tilt.interpolate({ inputRange: [0, 1], outputRange: ["-4deg", "4deg"] });
+  const scale = tilt.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] });
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={s.container}
     >
+      {/* اللوغو المتحرك */}
+      <View pointerEvents="none" style={s.titleWrap}>
+        <Animated.View
+          style={[s.logoShadow, { transform: [{ perspective: 800 }, { rotateY: rotate }, { scale }] }]}
+        >
+          <Animated.Image
+            source={require("../../assets/hawc_logo.png")}
+            style={{ width: LOGO_SIZE, height: LOGO_SIZE, resizeMode: "contain" }}
+          />
+        </Animated.View>
+      </View>
+
       <View style={s.card}>
-        <Text style={s.title}>Welcome back</Text>
+        <Text style={s.title}>Welcome</Text>
         <Text style={s.subtitle}>Sign in to continue</Text>
 
         <Formik
@@ -91,7 +109,7 @@ export default function LoginScreen() {
                   ) : null}
                 </View>
 
-                {/* Password + eye inside input */}
+                {/* Password */}
                 <View style={s.field}>
                   <Text style={s.label}>Password</Text>
                   <View style={s.inputWrap}>
@@ -106,7 +124,7 @@ export default function LoginScreen() {
                       value={values.password}
                       onChangeText={handleChange("password")}
                       onBlur={handleBlur("password")}
-                      secureTextEntry={hidePass} // true = مخفي
+                      secureTextEntry={hidePass}
                       autoComplete="password"
                       textContentType="password"
                     />
@@ -116,7 +134,6 @@ export default function LoginScreen() {
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                       <MaterialCommunityIcons
-                        // عين مع خط عندما النص مخفي، عين مفتوحة عندما ظاهر
                         name={hidePass ? "eye-off-outline" : "eye-outline"}
                         size={22}
                         color="#64748b"
@@ -161,7 +178,22 @@ const s = StyleSheet.create({
     justifyContent: "flex-start",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 60, // رفع البطاقة للأعلى
+    paddingTop: 50,
+  },
+ titleWrap: {
+  position: "absolute",
+  top: -40, // ← رفع الشعار للأعلى أكثر (زد السالب إذا تريد أقرب للهيدر)
+  left: 0,
+  right: 0,
+  alignItems: "center",
+  zIndex: 2,
+},
+  logoShadow: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 18 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 16,
   },
   card: {
     width: "100%",
@@ -177,26 +209,27 @@ const s = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 3,
+    marginTop: 150,
   },
   title: { fontSize: 26, fontWeight: "900", color: "#0b1220", textAlign: "center" },
-  subtitle: { fontSize: 14, color: "#64748b", textAlign: "center", marginTop: 6, marginBottom: 22 },
+ subtitle: { fontSize: 14, color: BLUE, textAlign: "center", marginTop: 6, marginBottom: 22 },
   field: { marginBottom: 14 },
   label: { fontSize: 13, fontWeight: "700", color: "#334155", marginBottom: 6 },
   inputWrap: { position: "relative" },
   input: {
-    height: 46,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#dbe4f3",
-    backgroundColor: "#f1f5f9",
-    paddingHorizontal: 12,
-    color: "#0b1220",
-  },
+  height: 46,
+  borderRadius: 10,
+  borderWidth: 1,
+  borderColor: BLUE,          // ← كان #dbe4f3
+  backgroundColor: "#eef6ff", // ← كان #f1f5f9
+  paddingHorizontal: 12,
+  color: "#0b1220",
+},
   inputWithIcon: { paddingRight: 38 },
   eyeBtn: { position: "absolute", right: 10, top: 12 },
   inputErr: { borderColor: "#ef4444", backgroundColor: "#fff" },
   err: { color: "#ef4444", fontSize: 12, marginTop: 6, fontWeight: "700" },
   btn: { marginTop: 18 },
-  footer: { textAlign: "center", color: "#475569", marginTop: 12 },
+  footer: { textAlign: "center", color: BLUE, marginTop: 12 },
   link: { color: BLUE, fontWeight: "800" },
 });

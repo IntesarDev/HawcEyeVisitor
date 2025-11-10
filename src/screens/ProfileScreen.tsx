@@ -1,6 +1,5 @@
 // src/screens/ProfileScreen.tsx
-import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Animated } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import AppButton from "../components/AppButton";
 import MaterialCommunityIcons from "@expo/vector-icons/build/MaterialCommunityIcons";
 
@@ -9,29 +8,6 @@ import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
 import { logout } from "../store/slices/auth";
 
 const BLUE = "#0d7ff2";
-
-/* شعار متحرك فوق كارت المصباح */
-function Tagline() {
-  const o = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(o, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.delay(900),
-        Animated.timing(o, { toValue: 0, duration: 500, useNativeDriver: true }),
-        Animated.delay(300),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [o]);
-  const translateY = o.interpolate({ inputRange: [0, 1], outputRange: [8, 0] });
-  return (
-    <Animated.Text style={[s.tagline, { opacity: o, transform: [{ translateY }] }]}>
-      Book · Manage · Go
-    </Animated.Text>
-  );
-}
 
 export default function ProfileScreen() {
   // المستخدم من الريدكس بدل JSON
@@ -63,23 +39,12 @@ export default function ProfileScreen() {
         onPress={handleLogout}
         style={{ width: "90%", height: 64, borderRadius: 18, marginTop: 36 }}
       />
-
-      <View style={{ flex: 1 }} />
-
-      {/* الشعار المتحرك + كارت المصباح */}
-      <View style={s.tipArea}>
-        <Tagline />
-        <View style={s.tipCard}>
-          <MaterialCommunityIcons name="lightbulb-on-outline" size={20} color={BLUE} />
-          <Text style={s.tipText}>HAWC Visitor keeps your bookings organized</Text>
-        </View>
-      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f9fafb", alignItems: "center", paddingTop: 110, position: "relative" },
+  container: { flex: 1, backgroundColor: "#f9fafb", alignItems: "center", paddingTop: 60, position: "relative" },
   card: {
     alignItems: "center",
     backgroundColor: "#fff",

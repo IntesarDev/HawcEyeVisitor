@@ -2,7 +2,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import type { ResourceType } from "../types/env";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Asset } from "expo-asset";
 
 type Booking = {
@@ -118,10 +117,10 @@ export default function MyBookingsScreen() {
   );
 
   return (
-    <SafeAreaView style={s.container} edges={["top"]}>
+    <View style={s.container}>
       <Section title="Upcoming" data={sorted.up} />
       <Section title="Past" data={sorted.past} />
-    </SafeAreaView>
+    </View>
   );
 }
 
