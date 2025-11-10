@@ -13,7 +13,11 @@ import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
 import { setType, setDate, setStart, setHours } from "../store/slices/bookingDraft";
 
 const LIGHT_BLUE = "#eaf3ff";
+const BLUE = "#0d7ff2";
 const DEFAULT_DRAFT = { date: "", start: null as string | null, hours: 1 };
+
+// تاريخ اليوم بتنسيق YYYY-MM-DD (UTC)
+const todayUTC = () => new Date().toISOString().slice(0, 10);
 
 export default function BookingCalendarScreen() {
   const navigation = useNavigation<RootStackNavProps<"BookingCalendar">["navigation"]>();
@@ -29,7 +33,6 @@ export default function BookingCalendarScreen() {
   // اقرأ الجذر أولًا ثم اشتق مسودة هذا النوع مع فولباك آمن
   const draftRoot = useAppSelector(s => s.bookingDraft);
   const draftForType = (draftRoot?.byType?.[type]) ?? DEFAULT_DRAFT;
-
 
   const typeLabel = useMemo(
     () => (type === "room" ? "Meeting Hall" : type === "car" ? "Car" : "Parking"),
@@ -48,14 +51,22 @@ export default function BookingCalendarScreen() {
     });
   };
 
+  const today = todayUTC();
+
   return (
     <View style={s.container}>
       <Text style={s.header}>Choose {typeLabel} date</Text>
 
-      {/* اختيار التاريخ */}
+      {/* اختيار التاريخ — منع اختيار الأيام السابقة لليوم */}
       <BookingCalendar
         selectedDate={draftForType.date}
-        onSelectDate={(d) => dispatch(setDate({ type, date: d }))}
+        onSelectDate={(d) => {
+          if (d < today) return; // منع الماضي
+          dispatch(setDate({ type, date: d }));
+        }}
+        // إذا كان المكون يدعم minDate سيمنع الماضي بصريًا أيضًا
+        // @ts-ignore
+        minDate={today}
       />
 
       {/* اختيار وقت البداية */}
@@ -89,7 +100,7 @@ const s = StyleSheet.create({
   header: {
     fontSize: 22,
     fontWeight: "900",
-    color: "#0b1220",
+    color: BLUE, // أزرق بدل الرمادي
     textAlign: "center",
     marginTop: 8,
     marginBottom: 8,
