@@ -4,13 +4,24 @@ import { FlatList, StyleSheet, View, Text } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
 import type { Resource } from "../types/env";
-import { Asset } from "expo-asset";
 import ResourceListItem from "../components/ResourceListItem";
 
 // +++ NEW: قراءة المسودة من الريدكس للفولباك عند غياب الباراميترات
 import { useAppSelector } from "../hooks/reduxHooks";
 
+// +++ NEW: Firestore
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../src/config/firebaseConfig";
+
 const BLUE = "#0d7ff2";
+
+// +++ NEW: نوع الحجوزات المخزّنة في collection `bookings`
+type BookingDoc = {
+  resourceId: string;
+  type: "room" | "car" | "parking";
+  start: string;
+  end: string;
+};
 
 /** تداخل نطاقين تاريخ-وقت */
 const overlapsRange = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
@@ -51,29 +62,56 @@ export default function BookingListScreen() {
   const hours: number = params?.hours ?? draftForType.hours ?? 1;
 
   const [resources, setResources] = useState<Resource[]>([]);
+  // +++ NEW: كل الحجوزات من collection `bookings`
+  const [bookingsAll, setBookingsAll] = useState<BookingDoc[]>([]);
 
   useEffect(() => {
     let alive = true;
-    const build = (json: any): Resource[] => {
-      const out: Resource[] = [];
-      for (const r of json?.rooms ?? []) out.push({ ...r, type: "room" } as Resource);
-      for (const c of json?.cars ?? []) out.push({ ...c, type: "car" } as Resource);
-      for (const p of json?.parkings ?? []) out.push({ ...p, type: "parking" } as Resource);
-      return out;
-    };
-    (async () => {
+
+    const fetchFromFirestore = async () => {
       try {
-        const asset = Asset.fromModule(require("../mockData/resources.json"));
-        await asset.downloadAsync();
-        const uri = asset.localUri ?? asset.uri;
-        const res = await fetch(uri);
-        const json = await res.json();
-        if (alive) setResources(build(json));
-      } catch {
-        const json = require("../mockData/resources.json");
-        if (alive) setResources(build(json));
+        // rooms
+        const roomsSnap = await getDocs(collection(db, "rooms"));
+        const rooms = roomsSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+          type: "room" as const,
+        })) as Resource[];
+
+        // parkings
+        const parkingsSnap = await getDocs(collection(db, "parkings"));
+        const parkings = parkingsSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+          type: "parking" as const,
+        })) as Resource[];
+
+        // cars
+        const carsSnap = await getDocs(collection(db, "cars"));
+        const cars = carsSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+          type: "car" as const,
+        })) as Resource[];
+
+        // +++ NEW: bookings
+        const bookingsSnap = await getDocs(collection(db, "bookings"));
+        const bookings = bookingsSnap.docs.map(
+          (d) => d.data() as BookingDoc
+        );
+
+        if (alive) {
+          // ندمجهم كلهم في مصفوفة واحدة
+          setResources([...rooms, ...parkings, ...cars]);
+          // +++ NEW
+          setBookingsAll(bookings);
+        }
+      } catch (err) {
+        console.log("Firestore error:", err);
       }
-    })();
+    };
+
+    fetchFromFirestore();
     return () => {
       alive = false;
     };
@@ -98,34 +136,25 @@ export default function BookingListScreen() {
     for (const r of resources) {
       if (r.type !== currentType) continue;
 
-      if (r.type === "car" || r.type === "parking") {
-        const bookings = (r as any).bookings as { from: string; to: string }[] | undefined;
-        const hasOverlap =
-          Array.isArray(bookings) &&
-          bookings.some((b) => overlapsRange(startDT, endDT, new Date(b.from), new Date(b.to)));
-        if (!hasOverlap) {
-          const updated = { ...(r as any), availabilityNow: "Available" as const } as Resource;
-          out.push(updated);
-        }
-        continue;
-      }
+      // +++ NEW: استخدم نفس مصدر البيانات للحجوزات (collection `bookings`)
+      const bookingsForResource = bookingsAll.filter(
+        (b) => b.resourceId === String(r.id) && b.type === r.type
+      );
 
-      if (r.type === "room") {
-        if (!sameDayUTC(startDT, endDT)) continue;
-        const bookingsToday = (r as any).bookingsToday as { from: string; to: string }[] | undefined;
-        const wantS = start;
-        const wantE = fmtHM(endDT);
-        const busy =
-          Array.isArray(bookingsToday) && bookingsToday.some((b) => overlapsHH(wantS, wantE, b.from, b.to));
-        if (!busy) {
-          const updatedRoom = { ...(r as any), availabilityNow: "Available" as const } as Resource;
-          out.push(updatedRoom);
-        }
+      const hasOverlap =
+        bookingsForResource.length > 0 &&
+        bookingsForResource.some((b) =>
+          overlapsRange(startDT, endDT, new Date(b.start), new Date(b.end))
+        );
+
+      if (!hasOverlap) {
+        const updated = { ...(r as any), availabilityNow: "Available" as const } as Resource;
+        out.push(updated);
       }
     }
 
     return out;
-  }, [resources, currentType, startDT, endDT, start]);
+  }, [resources, currentType, startDT, endDT, bookingsAll]);
 
   const endLabel = fmt(endDT);
   const iconByType = currentType === "room" ? "door" : currentType === "car" ? "car" : "parking";

@@ -1,6 +1,6 @@
 // src/screens/BookingDetailScreen.tsx
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Image, ScrollView, Alert } from "react-native";
+import React, { useMemo, useRef, useEffect } from "react";
+import { View, Text, StyleSheet, Image, ScrollView, Alert, Animated } from "react-native";
 import { useRoute, useNavigation, StackActions } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
 import type { Resource } from "../types/env";
@@ -9,6 +9,17 @@ import BookingButton from "../components/AppButton"; // الزر الجديد
 // Redux: نُبقي فقط ما يخص مسودة الحجز
 import { useAppDispatch } from "../hooks/reduxHooks";
 import { resetCurrent } from "../store/slices/bookingDraft";
+
+// ===== Firestore =====
+import { db } from "../../src/config/firebaseConfig";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  query,
+  where,
+} from "firebase/firestore";
+// ======================
 
 const BLUE = "#0d7ff2";
 const CTA_H = 72;
@@ -22,6 +33,26 @@ export default function BookingDetailScreen() {
 
   const item = data as Resource;
   const pricePerHour = (item as any).pricePerHour ?? 0;
+
+  // ===== ANIMATION للتحذير =====
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [fadeAnim, slideAnim]);
+  // =============================
 
   // دالة تحسب وقت البداية والنهاية لتحديد عدد الساعات
   const buildUTC = (d?: string, hm?: string) => {
@@ -55,27 +86,76 @@ export default function BookingDetailScreen() {
 
   const canBook = !!(hasSelection && pricePerHour > 0 && hoursInt != null);
 
+  // helper للتداخل بين فترتين
+  const overlaps = (
+    aStart: Date,
+    aEnd: Date,
+    bStartIso: string,
+    bEndIso: string
+  ) => {
+    const bStart = new Date(bStartIso);
+    const bEnd = new Date(bEndIso);
+    return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
+  };
+
   // عند الحجز
-  const onBook = () => {
+  const onBook = async () => {
     if (!canBook) return;
 
     const s = buildUTC(date, start)!;
     const e = buildUTC(date, end)!;
+    const sIso = s.toISOString();
+    const eIso = e.toISOString();
 
-    // تم حذف تخزين الحجز في Redux (bookings)
-    // هنا مكان استدعاء API لاحقًا لإرسال الحجز إلى السيرفر
+    try {
+      // 1) التحقق من عدم وجود حجز متداخل لنفس الـ resource
+      const q = query(
+        collection(db, "bookings"),
+        where("resourceId", "==", (item as any).id),
+        // نجيب كل الحجوزات اللي تبدأ قبل نهاية الحجز الجديد
+        where("start", "<", eIso)
+      );
 
-    // امسح فقط مسودة النوع الحالي
-    dispatch(resetCurrent());
+      const snap = await getDocs(q);
+      const conflict = snap.docs.some((doc) => {
+        const data = doc.data() as any;
+        // نتأكد أيضاً أن نهاية الحجز القديم بعد بداية الحجز الجديد
+        return overlaps(s, e, data.start, data.end);
+      });
 
-    Alert.alert("Booked", "Your booking has been added.");
+      if (conflict) {
+        Alert.alert(
+          "Time conflict",
+          "This resource is already booked in this time range. Please choose another time."
+        );
+        return;
+      }
 
-    // ← يرجع لكل الشاشات السابقة للبداية (يفرغ الـstack)
-    navigation.dispatch(StackActions.popToTop());
+      // 2) لا يوجد تداخل → نسجل الحجز
+      await addDoc(collection(db, "bookings"), {
+        resourceId: (item as any).id,
+        resourceName: (item as any).name,
+        type: (item as any).type, // "room" | "car" | "parking"
+        location: (item as any).location ?? "",
+        start: sIso,
+        end: eIso,
+      });
 
-    // ← بعدها ينتقل إلى صفحة الحجوزات
-    // @ts-ignore
-    navigation.navigate("MyBookings");
+      // امسح فقط مسودة النوع الحالي
+      dispatch(resetCurrent());
+
+      Alert.alert("Booked", "Your booking has been added.");
+
+      // ← يرجع لكل الشاشات السابقة للبداية (يفرغ الـstack)
+      navigation.dispatch(StackActions.popToTop());
+
+      // ← بعدها ينتقل إلى صفحة الحجوزات
+      // @ts-ignore
+      navigation.navigate("MyBookings");
+    } catch (err) {
+      console.log("Failed to add booking:", err);
+      Alert.alert("Error", "Could not add booking. Please try again.");
+    }
   };
 
   return (
@@ -129,7 +209,6 @@ export default function BookingDetailScreen() {
               label="Range"
               value={(item as any).rangeKm ? `${(item as any).rangeKm} km` : "-"}
             />
-            <Row label="Last service" value={(item as any).lastService ?? "-"} />
           </Section>
         )}
 
@@ -161,6 +240,26 @@ export default function BookingDetailScreen() {
       </ScrollView>
 
       <View style={s.ctaWrap}>
+        {/* تحذير الإلغاء قبل 24 ساعة */}
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+            marginBottom: 8,
+          }}
+        >
+          <Text
+            style={{
+              color: "red",
+              fontWeight: "700",
+              textAlign: "center",
+              fontSize: 12,
+            }}
+          >
+            Cancellation is only allowed up to 24 hours before the booking time.
+          </Text>
+        </Animated.View>
+
         <BookingButton label="Book now" disabled={!canBook} onPress={onBook} />
       </View>
     </View>

@@ -2,7 +2,8 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import type { ResourceType } from "../types/env";
-import { Asset } from "expo-asset";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore"; // ← NEW
+import { db } from "../../src/config/firebaseConfig";
 
 type Booking = {
   id: string;
@@ -34,22 +35,26 @@ const HOURS24 = 24 * 3600 * 1000;
 export default function MyBookingsScreen() {
   const [bookings, setBookings] = useState<Booking[]>([]);
 
-  // تحميل البيانات من JSON المحلي
   useEffect(() => {
     let alive = true;
-    (async () => {
+
+    const fetchBookings = async () => {
       try {
-        const asset = Asset.fromModule(require("../mockData/mybookings.json"));
-        await asset.downloadAsync();
-        const uri = asset.localUri ?? asset.uri;
-        const res = await fetch(uri);
-        const json = await res.json();
-        if (alive) setBookings(json.bookings);
-      } catch {
-        const json = require("../mockData/mybookings.json");
-        if (alive) setBookings(json.bookings);
+        const snap = await getDocs(collection(db, "bookings"));
+        const list: Booking[] = snap.docs.map((d) => {
+          const data = d.data() as Omit<Booking, "id">;
+          return {
+            id: d.id,
+            ...data,
+          };
+        });
+        if (alive) setBookings(list);
+      } catch (err) {
+        console.log("Firestore bookings error:", err);
       }
-    })();
+    };
+
+    fetchBookings();
     return () => {
       alive = false;
     };
@@ -69,10 +74,16 @@ export default function MyBookingsScreen() {
 
   const canCancel = (b: Booking) => new Date(b.start).getTime() - now >= HOURS24;
 
-  const cancelBooking = (id: string) => {
+  const cancelBooking = async (id: string) => {
     setBookings((prev) => prev.filter((x) => x.id !== id));
     console.log("Canceled booking:", id);
-    // TODO: call Firebase cancel API
+
+    // ← NEW: حذف الحجز من Firestore
+    try {
+      await deleteDoc(doc(db, "bookings", id));
+    } catch (err) {
+      console.log("Delete booking error:", err);
+    }
   };
 
   const renderItem = (b: Booking) => {

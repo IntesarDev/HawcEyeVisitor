@@ -53,6 +53,12 @@ export default function BookingCalendarScreen() {
 
   const today = todayUTC();
 
+  // وقت الآن (محلي) بصيغة HH:mm
+const now = new Date();
+const currentHM = `${String(now.getHours()).padStart(2, "0")}:${String(
+  now.getMinutes()
+).padStart(2, "0")}`;
+
   return (
     <View style={s.container}>
       <Text style={s.header}>Choose {typeLabel} date</Text>
@@ -61,7 +67,7 @@ export default function BookingCalendarScreen() {
       <BookingCalendar
         selectedDate={draftForType.date}
         onSelectDate={(d) => {
-          if (d < today) return; // منع الماضي
+          if (d <= today) return; // منع الماضي
           dispatch(setDate({ type, date: d }));
         }}
         // إذا كان المكون يدعم minDate سيمنع الماضي بصريًا أيضًا
@@ -72,7 +78,11 @@ export default function BookingCalendarScreen() {
       {/* اختيار وقت البداية */}
       <StartTimePicker
         value={draftForType.start}
-        onChange={(v) => dispatch(setStart({ type, start: v }))}
+        onChange={(v) => {
+          // منع اختيار ساعة ماضية في نفس اليوم
+          if (draftForType.date >= today && v < currentHM) return;
+          dispatch(setStart({ type, start: v }));
+        }}
         step={30}
       />
 
