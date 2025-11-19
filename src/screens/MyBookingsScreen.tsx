@@ -4,6 +4,9 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native
 import type { ResourceType } from "../types/env";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore"; // ← NEW
 import { db } from "../../src/config/firebaseConfig";
+import { auth } from "../../src/config/firebaseConfig";
+import { query, where } from "firebase/firestore";
+
 
 type Booking = {
   id: string;
@@ -39,20 +42,27 @@ export default function MyBookingsScreen() {
     let alive = true;
 
     const fetchBookings = async () => {
-      try {
-        const snap = await getDocs(collection(db, "bookings"));
-        const list: Booking[] = snap.docs.map((d) => {
-          const data = d.data() as Omit<Booking, "id">;
-          return {
-            id: d.id,
-            ...data,
-          };
-        });
-        if (alive) setBookings(list);
-      } catch (err) {
-        console.log("Firestore bookings error:", err);
-      }
-    };
+  try {
+    const q = query(
+      collection(db, "bookings"),
+      where("userId", "==", auth.currentUser?.uid)
+    );
+
+    const snap = await getDocs(q);
+
+    const list: Booking[] = snap.docs.map((d) => {
+      const data = d.data() as Omit<Booking, "id">;
+      return {
+        id: d.id,
+        ...data,
+      };
+    });
+
+    if (alive) setBookings(list);
+  } catch (err) {
+    console.log("Firestore bookings error:", err);
+  }
+};
 
     fetchBookings();
     return () => {
