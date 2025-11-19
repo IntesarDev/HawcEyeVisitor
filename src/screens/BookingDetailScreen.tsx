@@ -99,64 +99,20 @@ export default function BookingDetailScreen() {
   };
 
   // عند الحجز
-  const onBook = async () => {
-    if (!canBook) return;
+  const onBook = () => {
+  if (!canBook || !date || !start || !end || total == null) return;
 
-    const s = buildUTC(date, start)!;
-    const e = buildUTC(date, end)!;
-    const sIso = s.toISOString();
-    const eIso = e.toISOString();
+  // الانتقال إلى شاشة الدفع مع كل بيانات الحجز
+  // @ts-ignore
+  navigation.navigate("Payment", {
+    data: item,
+    date,
+    start,
+    end,
+    total,
+  });
+};
 
-    try {
-      // 1) التحقق من عدم وجود حجز متداخل لنفس الـ resource
-      const q = query(
-        collection(db, "bookings"),
-        where("resourceId", "==", (item as any).id),
-        // نجيب كل الحجوزات اللي تبدأ قبل نهاية الحجز الجديد
-        where("start", "<", eIso)
-      );
-
-      const snap = await getDocs(q);
-      const conflict = snap.docs.some((doc) => {
-        const data = doc.data() as any;
-        // نتأكد أيضاً أن نهاية الحجز القديم بعد بداية الحجز الجديد
-        return overlaps(s, e, data.start, data.end);
-      });
-
-      if (conflict) {
-        Alert.alert(
-          "Time conflict",
-          "This resource is already booked in this time range. Please choose another time."
-        );
-        return;
-      }
-
-      // 2) لا يوجد تداخل → نسجل الحجز
-      await addDoc(collection(db, "bookings"), {
-        resourceId: (item as any).id,
-        resourceName: (item as any).name,
-        type: (item as any).type, // "room" | "car" | "parking"
-        location: (item as any).location ?? "",
-        start: sIso,
-        end: eIso,
-      });
-
-      // امسح فقط مسودة النوع الحالي
-      dispatch(resetCurrent());
-
-      Alert.alert("Booked", "Your booking has been added.");
-
-      // ← يرجع لكل الشاشات السابقة للبداية (يفرغ الـstack)
-      navigation.dispatch(StackActions.popToTop());
-
-      // ← بعدها ينتقل إلى صفحة الحجوزات
-      // @ts-ignore
-      navigation.navigate("MyBookings");
-    } catch (err) {
-      console.log("Failed to add booking:", err);
-      Alert.alert("Error", "Could not add booking. Please try again.");
-    }
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>

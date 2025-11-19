@@ -7,6 +7,9 @@ import BookingListScreen from "../screens/BookingList";
 import BookingDetailScreen from "../screens/BookingDetailScreen";
 import BookingCalendarScreen from "../screens/BookingCalendarScreen";
 import AboutScreen from "../screens/AboutScreen"; 
+import PaymentScreen from "../screens/PaymentScreen";
+import PaymentWebView from "../screens/PaymentWebView";
+
 
 const RootStack = createStackNavigator<RootStackParamList>();
 
@@ -57,6 +60,17 @@ const RootStackNavigator = () => {
         component={AboutScreen}
         options={{ title: "About HAWC-Servers", headerBackTitle: "" }}
       />
+      <RootStack.Screen
+          name="Payment"
+          component={PaymentScreen}
+          options={{ title: "Payment", headerBackTitle: "" }}
+        />
+     <RootStack.Screen
+        name="PaymentWebView"
+        component={PaymentWebView}
+        options={{ title: "Payment" }}
+      />
+
     </RootStack.Navigator>
   );
 };

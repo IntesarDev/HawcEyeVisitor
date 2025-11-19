@@ -7,6 +7,23 @@ export type RootStackParamList = {
   BookingCalendar: { type: ResourceType };
   BookingList: { type: ResourceType; date: string; start: string; hours: number };
   BookingDetail: { data: Resource; date?: string; start?: string; end?: string };
+  Payment: { data: Resource; date: string; start: string; end: string; total: number };
+
+  PaymentWebView: {
+    checkoutUrl: string;
+    returnUrl: string;
+    booking: {
+      paymentId: string;
+      resourceId: string;
+      resourceName: string;
+      type: ResourceType;
+      location: string;
+      startIso: string;
+      endIso: string;
+      total: number;
+    };
+  };
+
   About: undefined; // ← الإضافة
 };
 
