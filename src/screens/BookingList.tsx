@@ -11,7 +11,8 @@ import { useAppSelector } from "../hooks/reduxHooks";
 
 // +++ NEW: Firestore
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../src/config/firebaseConfig";
+import { auth, db } from "../../src/config/firebaseConfig";
+
 
 const BLUE = "#0d7ff2";
 

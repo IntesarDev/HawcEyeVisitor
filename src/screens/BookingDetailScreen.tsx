@@ -7,11 +7,13 @@ import type { Resource } from "../types/env";
 import BookingButton from "../components/AppButton"; // الزر الجديد
 
 // Redux: نُبقي فقط ما يخص مسودة الحجز
-import { useAppDispatch } from "../hooks/reduxHooks";
+import { useAppDispatch, useAppSelector } from "../hooks/reduxHooks";
 import { resetCurrent } from "../store/slices/bookingDraft";
 
 // ===== Firestore =====
-import { db } from "../../src/config/firebaseConfig";
+import { auth, db } from "../../src/config/firebaseConfig";
+
+
 import {
   addDoc,
   collection,
@@ -24,6 +26,7 @@ import {
 const BLUE = "#0d7ff2";
 const CTA_H = 72;
 
+
 export default function BookingDetailScreen() {
   const {
     params: { data, date, start, end },
@@ -33,6 +36,9 @@ export default function BookingDetailScreen() {
 
   const item = data as Resource;
   const pricePerHour = (item as any).pricePerHour ?? 0;
+
+  const user = useAppSelector((state) => state.auth.user);
+
 
   // ===== ANIMATION للتحذير =====
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -102,7 +108,11 @@ export default function BookingDetailScreen() {
   const onBook = () => {
   if (!canBook || !date || !start || !end || total == null) return;
 
-  // الانتقال إلى شاشة الدفع مع كل بيانات الحجز
+  if (!user) {
+    Alert.alert("Not logged in", "Please log in first.");
+    return;
+  }
+
   // @ts-ignore
   navigation.navigate("Payment", {
     data: item,
@@ -110,6 +120,8 @@ export default function BookingDetailScreen() {
     start,
     end,
     total,
+    userId: user.id,
+    userEmail: user.email,
   });
 };
 

@@ -1,4 +1,5 @@
 const { createMollieClient } = require('@mollie/api-client');
+const { Resend } = require('resend');
 
 console.log(
   'MOLLIE_API_KEY exists:',
@@ -7,9 +8,14 @@ console.log(
   process.env.MOLLIE_API_KEY ? process.env.MOLLIE_API_KEY.slice(0, 7) : null
 );
 
+const resend = new Resend(process.env.RESEND_API_KEY);
+
 const mollieClient = createMollieClient({
-  apiKey: process.env.MOLLIE_API_KEY, // من Vercel env
+  apiKey: process.env.MOLLIE_API_KEY,
 });
+
+// الإيميل الوحيد المسموح به في وضع التست
+const TEST_EMAIL = 'intesar.hogent@gmail.com';
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -27,13 +33,39 @@ module.exports = async (req, res) => {
 
     const payment = await mollieClient.payments.create({
       amount: {
-        value: Number(amount).toFixed(2), // "10.00"
+        value: Number(amount).toFixed(2),
         currency: 'EUR',
       },
       description: description || 'HAWC booking payment',
       redirectUrl: 'https://hawc-payments-backend.vercel.app/api/payment-complete',
       metadata: metadata || {},
     });
+
+    try {
+      // الإيميل الحقيقي للمستخدم فقط نذكره في نص الرسالة
+      const realUserEmail = metadata?.userEmail || metadata?.email || 'unknown';
+
+      // الإرسال دائماً إلى TEST_EMAIL حسب شروط Resend
+      const targetEmail = TEST_EMAIL;
+
+      if (process.env.RESEND_API_KEY) {
+        const emailResult = await resend.emails.send({
+          from: 'onboarding@resend.dev',
+          to: targetEmail,
+          subject: 'HAWC booking payment created',
+          html: `
+            <h2>Payment created</h2>
+            <p>Your payment for <strong>${description || 'HAWC booking'}</strong> was created.</p>
+            <p>Amount: <strong>€${Number(amount).toFixed(2)}</strong></p>
+            <p>Original user email: <strong>${realUserEmail}</strong></p>
+          `,
+        });
+
+        console.log('Resend emailResult:', emailResult);
+      }
+    } catch (emailErr) {
+      console.error('Resend email error:', emailErr);
+    }
 
     res.status(200).json({
       id: payment.id,

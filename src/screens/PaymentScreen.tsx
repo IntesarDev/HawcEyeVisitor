@@ -2,7 +2,7 @@
 
 import React, { useCallback } from "react";
 import { View, Text, ScrollView, Alert, StyleSheet } from "react-native";
-import { useRoute, useNavigation, StackActions } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
 import BookingButton from "../components/AppButton";
 
@@ -11,11 +11,10 @@ import { useAppDispatch } from "../hooks/reduxHooks";
 import { resetCurrent } from "../store/slices/bookingDraft";
 
 // Firestore
-import { db } from "../../src/config/firebaseConfig";
+import { auth, db } from "../../src/config/firebaseConfig";
 import {
-  addDoc,
-  collection,
   getDocs,
+  collection,
   query,
   where,
 } from "firebase/firestore";
@@ -29,9 +28,8 @@ export default function PaymentScreen() {
   const navigation = useNavigation<RootStackNavProps<"Payment">["navigation"]>();
   const dispatch = useAppDispatch();
 
-  const { data, date, start, end, total } = params;
+  const { data, date, start, end, total, userId, userEmail } = params;
 
-  // نفس فكرة buildUTC من BookingDetailScreen
   const buildUTC = (d?: string, hm?: string) => {
     if (!d || !hm) return null;
     const [hh, mm] = hm.split(":").map((n) => parseInt(String(n), 10));
@@ -74,6 +72,10 @@ export default function PaymentScreen() {
   const handleContinue = useCallback(async () => {
     if (!date || !start || !end) return;
 
+    // نسمح بالاستمرار حتى لو userId مفقود (لنظهر خطأ سابقًا فقط في الواجهة)
+    const effectiveUserId = userId ?? "";
+    const effectiveUserEmail = userEmail ?? null;
+
     const s = buildUTC(date, start);
     const e = buildUTC(date, end);
 
@@ -86,7 +88,6 @@ export default function PaymentScreen() {
     const eIso = e.toISOString();
 
     try {
-      // 1) فحص التداخل قبل أي شيء
       const conflict = await checkConflict((data as any).id, sIso, eIso);
 
       if (conflict) {
@@ -97,7 +98,6 @@ export default function PaymentScreen() {
         return;
       }
 
-      // 2) إنشاء payment في الـ backend (Mollie)
       const response = await fetch(
         `${PAYMENTS_BASE_URL}/api/create-payment`,
         {
@@ -113,6 +113,8 @@ export default function PaymentScreen() {
               date,
               start,
               end,
+              userId: effectiveUserId,
+              userEmail: effectiveUserEmail,
             },
           }),
         }
@@ -138,7 +140,6 @@ export default function PaymentScreen() {
         return;
       }
 
-      // 3) فتح WebView مع checkoutUrl و paymentId
       // @ts-ignore
       navigation.navigate("PaymentWebView", {
         checkoutUrl: paymentData.checkoutUrl,
@@ -152,29 +153,24 @@ export default function PaymentScreen() {
           startIso: sIso,
           endIso: eIso,
           total,
+          userId: effectiveUserId,
+          userEmail: effectiveUserEmail,
         },
       });
     } catch (err) {
       console.log("Failed to start payment:", err);
       Alert.alert("Error", "Could not start payment. Please try again.");
     }
-  }, [date, start, end, data, total, checkConflict, navigation]);
+  }, [date, start, end, data, total, userId, userEmail, checkConflict, navigation]);
 
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>
-          Confirm payment
-        </Text>
+        <Text style={styles.title}>Confirm payment</Text>
 
-        {/* Resource card */}
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>
-            Resource
-          </Text>
-          <Text style={styles.cardValue}>
-            {(data as any).name}
-          </Text>
+          <Text style={styles.cardLabel}>Resource</Text>
+          <Text style={styles.cardValue}>{(data as any).name}</Text>
           {Boolean((data as any).location) && (
             <Text style={styles.cardSubText}>
               {(data as any).location}
@@ -182,36 +178,25 @@ export default function PaymentScreen() {
           )}
         </View>
 
-        {/* When card */}
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>
-            When
-          </Text>
+          <Text style={styles.cardLabel}>When</Text>
           <Text style={styles.whenText}>
             {date} • {start} → {end}
           </Text>
         </View>
 
-        {/* Amount card */}
         <View style={styles.cardAmount}>
-          <Text style={styles.cardLabel}>
-            Amount
-          </Text>
-          <Text style={styles.amount}>
-            {total.toFixed(2)} €
-          </Text>
+          <Text style={styles.cardLabel}>Amount</Text>
+          <Text style={styles.amount}>{total.toFixed(2)} €</Text>
         </View>
 
-              {/* Info box */}
-      <View style={styles.infoBox}>
-        <Text style={styles.infoTitle}>
-          Secure online payment
-        </Text>
-        <Text style={styles.infoText}>
-          You will be redirected to a secure payment page to complete this booking.
-          Once the payment is confirmed, your reservation will be saved automatically.
-        </Text>
-      </View>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>Secure online payment</Text>
+          <Text style={styles.infoText}>
+            You will be redirected to a secure payment page to complete this booking.
+            Once the payment is confirmed, your reservation will be saved automatically.
+          </Text>
+        </View>
 
         <BookingButton
           label="Continue to payment"
@@ -227,65 +212,55 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#ffffff",
   },
-
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 16,
     paddingTop: 24,
     paddingBottom: 24,
   },
-
   title: {
     fontSize: 24,
     fontWeight: "800",
     color: "#0f172a",
     marginBottom: 16,
   },
-
   card: {
     backgroundColor: "#f8fafc",
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
   },
-
   cardAmount: {
     backgroundColor: "#f8fafc",
     borderRadius: 16,
     padding: 16,
     marginBottom: 24,
   },
-
   cardLabel: {
     fontSize: 16,
     fontWeight: "600",
     color: "#334155",
     marginBottom: 4,
   },
-
   cardValue: {
     fontSize: 18,
     fontWeight: "700",
     color: "#0f172a",
   },
-
   cardSubText: {
     fontSize: 14,
     color: "#64748b",
     marginTop: 4,
   },
-
   whenText: {
     fontSize: 14,
     color: "#1e293b",
   },
-
   amount: {
     fontSize: 24,
     fontWeight: "800",
     color: "#2563eb",
   },
-
   infoBox: {
     backgroundColor: "#eff6ff",
     borderWidth: 1,
@@ -294,14 +269,12 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 32,
   },
-
   infoTitle: {
     fontSize: 14,
     fontWeight: "600",
     color: "#1d4ed8",
     marginBottom: 4,
   },
-
   infoText: {
     fontSize: 12,
     color: "#1d4ed8",

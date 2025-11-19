@@ -7,7 +7,16 @@ export type RootStackParamList = {
   BookingCalendar: { type: ResourceType };
   BookingList: { type: ResourceType; date: string; start: string; hours: number };
   BookingDetail: { data: Resource; date?: string; start?: string; end?: string };
-  Payment: { data: Resource; date: string; start: string; end: string; total: number };
+
+  Payment: {
+    data: Resource;
+    date: string;
+    start: string;
+    end: string;
+    total: number;
+    userId: string;
+    userEmail: string | null;
+  };
 
   PaymentWebView: {
     checkoutUrl: string;
@@ -21,6 +30,8 @@ export type RootStackParamList = {
       startIso: string;
       endIso: string;
       total: number;
+      userId: string;
+      userEmail: string | null;
     };
   };
 

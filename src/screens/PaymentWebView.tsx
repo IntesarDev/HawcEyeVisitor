@@ -11,7 +11,6 @@ import {
 import { WebView, WebViewNavigation } from "react-native-webview";
 import { useRoute, useNavigation, StackActions } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
-import { auth } from "../../src/config/firebaseConfig"; 
 
 // Redux
 import { useAppDispatch } from "../hooks/reduxHooks";
@@ -67,10 +66,12 @@ export default function PaymentWebView() {
       navigation.goBack();
     }
   }, [navigation, result]);
+  
 
   const finalizeBooking = useCallback(async () => {
     await addDoc(collection(db, "bookings"), {
-      userId: auth.currentUser?.uid,
+      userId: booking.userId ?? null,
+      userEmail: booking.userEmail ?? null,
       resourceId: booking.resourceId,
       resourceName: booking.resourceName,
       type: booking.type,

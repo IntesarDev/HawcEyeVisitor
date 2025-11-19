@@ -3,8 +3,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import type { ResourceType } from "../types/env";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore"; // ← NEW
-import { db } from "../../src/config/firebaseConfig";
-import { auth } from "../../src/config/firebaseConfig";
+import { auth, db } from "../../src/config/firebaseConfig";
 import { query, where } from "firebase/firestore";
 
 
@@ -37,38 +36,44 @@ const HOURS24 = 24 * 3600 * 1000;
 
 export default function MyBookingsScreen() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+useEffect(() => {
+  let alive = true;
 
-  useEffect(() => {
-    let alive = true;
+  const fetchBookings = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        if (alive) setBookings([]);
+        return;
+      }
 
-    const fetchBookings = async () => {
-  try {
-    const q = query(
-      collection(db, "bookings"),
-      where("userId", "==", auth.currentUser?.uid)
-    );
+      const q = query(
+        collection(db, "bookings"),
+        where("userId", "==", currentUser.uid)
+      );
 
-    const snap = await getDocs(q);
+      const snap = await getDocs(q);
 
-    const list: Booking[] = snap.docs.map((d) => {
-      const data = d.data() as Omit<Booking, "id">;
-      return {
-        id: d.id,
-        ...data,
-      };
-    });
+      const list: Booking[] = snap.docs.map((d) => {
+        const data = d.data() as Omit<Booking, "id">;
+        return {
+          id: d.id,
+          ...data,
+        };
+      });
 
-    if (alive) setBookings(list);
-  } catch (err) {
-    console.log("Firestore bookings error:", err);
-  }
-};
+      if (alive) setBookings(list);
+    } catch (err) {
+      console.log("Firestore bookings error:", err);
+    }
+  };
 
-    fetchBookings();
-    return () => {
-      alive = false;
-    };
-  }, []);
+  fetchBookings();
+  return () => {
+    alive = false;
+  };
+}, []);
+
 
   const now = Date.now();
 
