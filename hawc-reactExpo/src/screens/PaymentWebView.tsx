@@ -1,6 +1,6 @@
 // src/screens/PaymentWebView.tsx
 import React, { useCallback, useRef, useState } from "react";
-import {View,ActivityIndicator,StyleSheet,Text,Pressable,} from "react-native";
+import { View, ActivityIndicator, StyleSheet, Text, Pressable } from "react-native";
 import { WebView, WebViewNavigation } from "react-native-webview";
 import { useRoute, useNavigation, StackActions } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
@@ -52,10 +52,9 @@ export default function PaymentWebView() {
       navigation.goBack();
     }
   }, [navigation, result]);
-  
 
   const finalizeBooking = useCallback(async () => {
-    await addDoc(collection(db, "bookings"), {
+    const docRef = await addDoc(collection(db, "bookings"), {
       userId: booking.userId ?? null,
       userEmail: booking.userEmail ?? null,
       resourceId: booking.resourceId,
@@ -65,7 +64,32 @@ export default function PaymentWebView() {
       start: booking.startIso,
       end: booking.endIso,
       total: booking.total,
+      paymentId: booking.paymentId ?? null,
     });
+
+    try {
+      await fetch(`${PAYMENTS_BASE_URL}/api/send-booking-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: docRef.id,
+          paymentId: booking.paymentId ?? null,
+          booking: {
+            userId: booking.userId ?? null,
+            userEmail: booking.userEmail ?? null,
+            resourceId: booking.resourceId,
+            resourceName: booking.resourceName,
+            type: booking.type,
+            location: booking.location,
+            start: booking.startIso,
+            end: booking.endIso,
+            total: booking.total,
+          },
+        }),
+      });
+    } catch (e) {
+      console.log("send-booking-email failed:", e);
+    }
 
     dispatch(resetCurrent());
 
@@ -77,17 +101,14 @@ export default function PaymentWebView() {
     });
   }, [booking, dispatch]);
 
-  const showErrorResult = useCallback(
-    (title: string, message: string) => {
-      setResult({
-        kind: "error",
-        title,
-        message,
-        goTo: "back",
-      });
-    },
-    []
-  );
+  const showErrorResult = useCallback((title: string, message: string) => {
+    setResult({
+      kind: "error",
+      title,
+      message,
+      goTo: "back",
+    });
+  }, []);
 
   const handleNavigationChange = useCallback(
     (navState: WebViewNavigation) => {
@@ -127,7 +148,6 @@ export default function PaymentWebView() {
             if (status === "paid") {
               await finalizeBooking();
             } else if (status === "canceled") {
-
               setResult({
                 kind: "error",
                 title: "Payment canceled",
@@ -135,35 +155,20 @@ export default function PaymentWebView() {
                 goTo: "home",
               });
             } else if (status === "failed") {
-
-              showErrorResult(
-                "Payment failed",
-                "The payment failed. Please try again."
-              );
+              showErrorResult("Payment failed", "The payment failed. Please try again.");
             } else if (status === "expired") {
-
-              showErrorResult(
-                "Payment expired",
-                "The payment has expired. Please try again."
-              );
+              showErrorResult("Payment expired", "The payment has expired. Please try again.");
             } else if (status === "open") {
- 
               showErrorResult(
                 "Payment not completed",
                 "Payment is still open. Please try again."
               );
             } else {
-              showErrorResult(
-                "Payment error",
-                `Unexpected payment status: ${status}.`
-              );
+              showErrorResult("Payment error", `Unexpected payment status: ${status}.`);
             }
           } catch (err) {
             console.log("Error checking payment status:", err);
-            showErrorResult(
-              "Payment error",
-              "Could not verify payment. Please try again."
-            );
+            showErrorResult("Payment error", "Could not verify payment. Please try again.");
           }
         })();
       }
@@ -242,11 +247,11 @@ const styles = StyleSheet.create({
   },
   resultCardSuccess: {
     borderLeftWidth: 4,
-    borderLeftColor: "#16a34a", 
+    borderLeftColor: "#16a34a",
   },
   resultCardError: {
     borderLeftWidth: 4,
-    borderLeftColor: "#dc2626", 
+    borderLeftColor: "#dc2626",
   },
   resultTitle: {
     fontSize: 18,
