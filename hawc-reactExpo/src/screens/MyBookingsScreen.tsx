@@ -1,6 +1,6 @@
 // src/screens/MyBookingsScreen.tsx
 import React, { useMemo, useState, useEffect } from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from "react-native";
 import type { ResourceType } from "../types/env";
 import { collection, getDocs, deleteDoc, doc, query, where } from "firebase/firestore";
 import { auth, db } from "../config/firebaseConfig";
@@ -90,16 +90,30 @@ export default function MyBookingsScreen() {
 
   const canCancel = (b: Booking) => new Date(b.start).getTime() - now >= HOURS24;
 
-  const cancelBooking = async (id: string) => {
-    setBookings((prev) => prev.filter((x) => x.id !== id));
-    console.log("Canceled booking:", id);
+  const cancelBooking = (id: string) => {
+  Alert.alert(
+    "Confirm cancelation",
+    "Are you sure you want to cancel this booking?",
+    [
+      { text: "No", style: "cancel" },
+      {
+        text: "Yes, cancel",
+        style: "destructive",
+        onPress: async () => {
+          setBookings((prev) => prev.filter((x) => x.id !== id));
+          console.log("Canceled booking:", id);
 
-    try {
-      await deleteDoc(doc(db, "bookings", id));
-    } catch (err) {
-      console.log("Delete booking error:", err);
-    }
-  };
+          try {
+            await deleteDoc(doc(db, "bookings", id));
+          } catch (err) {
+            console.log("Delete booking error:", err);
+          }
+        },
+      },
+    ],
+    { cancelable: true }
+  );
+};
 
   const renderItem = (b: Booking) => {
     const allow = canCancel(b);

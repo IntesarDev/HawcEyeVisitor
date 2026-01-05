@@ -287,12 +287,12 @@ export default function PaymentScreen() {
         </View>
 
           {userType === "standard" && (
-            <BookingButton label="Pay with Mollie" onPress={handleContinue} />
+            <BookingButton label="Pay now" onPress={handleContinue} />
           )}
 
           {userType === "professional" && (
             <>
-              <BookingButton label="Pay with Mollie" onPress={handleContinue} />
+              <BookingButton label="Pay now" onPress={handleContinue} />
 
               {invoiceApproval === "approved" && (
                 <BookingButton
