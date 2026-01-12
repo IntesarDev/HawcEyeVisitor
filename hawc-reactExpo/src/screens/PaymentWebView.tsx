@@ -67,30 +67,6 @@ export default function PaymentWebView() {
       paymentId: booking.paymentId ?? null,
     });
 
-    try {
-      await fetch(`${PAYMENTS_BASE_URL}/api/send-booking-email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId: docRef.id,
-          paymentId: booking.paymentId ?? null,
-          booking: {
-            userId: booking.userId ?? null,
-            userEmail: booking.userEmail ?? null,
-            resourceId: booking.resourceId,
-            resourceName: booking.resourceName,
-            type: booking.type,
-            location: booking.location,
-            start: booking.startIso,
-            end: booking.endIso,
-            total: booking.total,
-          },
-        }),
-      });
-    } catch (e) {
-      console.log("send-booking-email failed:", e);
-    }
-
     dispatch(resetCurrent());
 
     setResult({
