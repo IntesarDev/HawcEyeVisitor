@@ -73,12 +73,26 @@ export default function AdminInvoiceScreen() {
   }, [allowed]);
 
   const updateStatus = async (userId: string, status: "approved" | "rejected") => {
-    try {
-      await updateDoc(doc(db, "users", userId), { invoiceApproval: status });
-      Alert.alert("Success", `Invoice ${status}`);
-    } catch {
-      Alert.alert("Error", "Could not update status");
-    }
+    Alert.alert(
+      "Confirm",
+      "Are you sure?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: status === "approved" ? "Approve" : "Reject",
+          style: status === "rejected" ? "destructive" : "default",
+          onPress: async () => {
+            try {
+              await updateDoc(doc(db, "users", userId), { invoiceApproval: status });
+              Alert.alert("Success", `Invoice ${status}`);
+            } catch {
+              Alert.alert("Error", "Could not update status");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   if (allowed === false) {

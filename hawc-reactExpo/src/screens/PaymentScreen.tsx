@@ -5,7 +5,7 @@ import { useRoute, useNavigation } from "@react-navigation/native";
 import type { RootStackNavProps } from "../navigation/types";
 import BookingButton from "../components/AppButton";
 import { auth, db } from "../config/firebaseConfig";
-import {getDocs,collection,query,where,doc,getDoc,} from "firebase/firestore";
+import {getDocs,collection,query,where,doc,onSnapshot,} from "firebase/firestore";
 
 // Backend base URL (Vercel)
 const PAYMENTS_BASE_URL = "https://hawc-payments-backend.vercel.app";
@@ -16,32 +16,33 @@ export default function PaymentScreen() {
   const navigation = useNavigation<RootStackNavProps<"Payment">["navigation"]>();
 
   const { data, date, start, end, total } = params;
-  
-  const [invoiceApproval, setInvoiceApproval] = useState<
-  "none" | "pending" | "approved" | "rejected">("none");
 
-  const [userType, setUserType] = useState<"standard" | "professional" | "admin">("standard");
+  const [invoiceApproval, setInvoiceApproval] = useState<
+    "none" | "pending" | "approved" | "rejected">("none");
+
+   const [userType, setUserType] = useState<"standard" | "professional" | "admin">("standard");
   const [invoiceBusy, setInvoiceBusy] = useState(false);
 
   useEffect(() => {
-    const fetchUserType = async () => {
-      const uid = auth.currentUser?.uid;
-      if (!uid) return;
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
 
-      try {
-        const snap = await getDoc(doc(db, "users", uid));
-        if (snap.exists()) {
+    const userRef = doc(db, "users", uid);
+
+    const unsub = onSnapshot(
+      userRef,
+      (snap) => {
+        if (!snap.exists()) return;
         const d = snap.data() as any;
         setUserType(d.userType || "standard");
         setInvoiceApproval(d.invoiceApproval || "none");
+      },
+      (err) => {
+        console.log("Failed to listen user doc:", err);
       }
+    );
 
-      } catch (err) {
-        console.log("Failed to load userType:", err);
-      }
-    };
-
-    fetchUserType();
+    return unsub;
   }, []);
 
   const buildUTC = (d?: string, hm?: string) => {
@@ -64,21 +65,21 @@ export default function PaymentScreen() {
     return aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
   };
 
-  const checkConflict = useCallback(
+ const checkConflict = useCallback(
     async (resourceId: string, sIso: string, eIso: string) => {
       const q = query(
-        collection(db, "bookings"),
-        where("resourceId", "==", resourceId),
-        where("start", "<", eIso)
-      );
+      collection(db, "bookings"),
+      where("resourceId", "==", resourceId),
+      where("start", "<", eIso)
+    );
 
-      const snap = await getDocs(q);
-      const conflict = snap.docs.some((docSnap) => {
-        const d = docSnap.data() as any;
-        return overlaps(new Date(sIso), new Date(eIso), d.start, d.end);
-      });
+    const snap = await getDocs(q);
+    const conflict = snap.docs.some((docSnap) => {
+      const d = docSnap.data() as any;
+      return overlaps(new Date(sIso), new Date(eIso), d.start, d.end);
+    });
 
-      return conflict;
+    return conflict;
     },
     []
   );
@@ -286,46 +287,46 @@ export default function PaymentScreen() {
           </Text>
         </View>
 
-          {userType === "standard" && (
+        {userType === "standard" && (
             <BookingButton label="Pay now" onPress={handleContinue} />
           )}
+          
+        {userType === "professional" && (
+          <>
+            <BookingButton label="Pay now" onPress={handleContinue} />
 
-          {userType === "professional" && (
-            <>
-              <BookingButton label="Pay now" onPress={handleContinue} />
-
-              {invoiceApproval === "approved" && (
-                <BookingButton
-                  label="Pay later (invoice)"
-                  onPress={handleInvoiceLater}
-                  style={{ marginTop: 12 }}
-                />
-              )}
-
-              {invoiceApproval === "pending" && (
-                <Text style={{ marginTop: 12, color: "#64748b", fontSize: 12 }}>
-                  Invoice payment is pending approval.
-                </Text>
-              )}
-
-              {invoiceApproval === "rejected" && (
-                <Text style={{ marginTop: 12, color: "#dc2626", fontSize: 12 }}>
-                  Your invoice request was rejected. You must pay online to complete this booking.
-                </Text>
-              )}
-            </>
-          )}
-
-          {userType === "admin" && (
-            <>
-              <BookingButton label="Pay with Mollie" onPress={handleContinue} />
+            {invoiceApproval === "approved" && (
               <BookingButton
                 label="Pay later (invoice)"
                 onPress={handleInvoiceLater}
                 style={{ marginTop: 12 }}
               />
-            </>
-          )}
+            )}
+
+            {invoiceApproval === "pending" && (
+              <Text style={{ marginTop: 12, color: "#64748b", fontSize: 12 }}>
+                Invoice payment is pending approval.
+              </Text>
+            )}
+
+            {invoiceApproval === "rejected" && (
+              <Text style={{ marginTop: 12, color: "#dc2626", fontSize: 12 }}>
+                Your invoice request was rejected. You must pay online to complete this booking.
+              </Text>
+            )}
+          </>
+        )}
+
+        {userType === "admin" && (
+          <>
+            <BookingButton label="Pay with Mollie" onPress={handleContinue} />
+            <BookingButton
+              label="Pay later (invoice)"
+              onPress={handleInvoiceLater}
+              style={{ marginTop: 12 }}
+            />
+          </>
+        )}
       </ScrollView>
     </View>
   );
