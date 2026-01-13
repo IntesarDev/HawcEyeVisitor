@@ -11,14 +11,16 @@ const TEST_EMAIL = "intesar.hogent@gmail.com";
 
 // ===== Firebase Init (SAFE) =====
 if (!admin.apps.length) {
-  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+  if (!raw) {
     console.error("FIREBASE_SERVICE_ACCOUNT is missing in environment variables");
     throw new Error("Missing FIREBASE_SERVICE_ACCOUNT");
   }
 
   let serviceAccount;
   try {
-    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    serviceAccount = JSON.parse(raw);
   } catch (err) {
     console.error("Invalid FIREBASE_SERVICE_ACCOUNT JSON:", err);
     throw new Error("Invalid FIREBASE_SERVICE_ACCOUNT JSON");
