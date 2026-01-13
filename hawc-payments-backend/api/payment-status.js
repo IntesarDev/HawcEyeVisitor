@@ -9,26 +9,41 @@ const mollieClient = createMollieClient({
 const resend = new Resend(process.env.RESEND_API_KEY);
 const TEST_EMAIL = "intesar.hogent@gmail.com";
 
+// ===== Firebase Init (SAFE) =====
 if (!admin.apps.length) {
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    console.error("FIREBASE_SERVICE_ACCOUNT is missing in environment variables");
+    throw new Error("Missing FIREBASE_SERVICE_ACCOUNT");
+  }
+
+  let serviceAccount;
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } catch (err) {
+    console.error("Invalid FIREBASE_SERVICE_ACCOUNT JSON:", err);
+    throw new Error("Invalid FIREBASE_SERVICE_ACCOUNT JSON");
+  }
+
   admin.initializeApp({
-    credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)),
+    credential: admin.credential.cert(serviceAccount),
   });
 }
+
 const db = admin.firestore();
 
+// ===== Handler =====
 module.exports = async (req, res) => {
   const { id } = req.query;
+
   if (!id) {
-    res.status(400).json({ error: "id is required" });
-    return;
+    return res.status(400).json({ error: "id is required" });
   }
 
   try {
     const payment = await mollieClient.payments.get(id);
 
     if (payment.status !== "paid") {
-      res.status(200).json({ id: payment.id, status: payment.status });
-      return;
+      return res.status(200).json({ id: payment.id, status: payment.status });
     }
 
     const md = payment.metadata || {};
@@ -57,7 +72,6 @@ module.exports = async (req, res) => {
       });
     }
 
-
     const fresh = await bookingRef.get();
     if (process.env.RESEND_API_KEY && fresh.exists && !fresh.data().emailed) {
       await resend.emails.send({
@@ -75,12 +89,12 @@ module.exports = async (req, res) => {
       await bookingRef.update({ emailed: true });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       id: payment.id,
       status: payment.status,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch payment status" });
+    console.error("payment-status error:", err);
+    return res.status(500).json({ error: "Failed to fetch payment status" });
   }
 };
