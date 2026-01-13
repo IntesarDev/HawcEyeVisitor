@@ -28,6 +28,11 @@ function getDbOrNull() {
         return null;
       }
 
+      // ✅ FIX: Vercel often stores the private_key newlines as "\\n"
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+      }
+
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
@@ -57,7 +62,6 @@ module.exports = async (req, res) => {
 
     const db = getDbOrNull();
     if (!db) {
-      // لا نكسر الفنكشن، نرجّع خطأ واضح
       return res.status(500).json({
         error: "Server misconfigured: FIREBASE_SERVICE_ACCOUNT missing/invalid",
       });
