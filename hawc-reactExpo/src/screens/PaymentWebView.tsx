@@ -6,8 +6,6 @@ import { useRoute, useNavigation, StackActions } from "@react-navigation/native"
 import type { RootStackNavProps } from "../navigation/types";
 import { useAppDispatch } from "../hooks/reduxHooks";
 import { resetCurrent } from "../store/slices/bookingDraft";
-import { db } from "../config/firebaseConfig";
-import { addDoc, collection } from "firebase/firestore";
 
 const PAYMENTS_BASE_URL = "https://hawc-payments-backend.vercel.app";
 const COMPLETION_PATH = "/api/payment-complete";
@@ -27,11 +25,10 @@ export default function PaymentWebView() {
     useNavigation<RootStackNavProps<"PaymentWebView">["navigation"]>();
   const dispatch = useAppDispatch();
 
-  const { checkoutUrl, returnUrl, booking } = params as any;
+  const { checkoutUrl, booking } = params as any;
 
   const [loading, setLoading] = useState(true);
   const hasCompletedRef = useRef(false);
-
   const [result, setResult] = useState<PaymentResult | null>(null);
 
   const handleResultClose = useCallback(() => {
@@ -52,30 +49,6 @@ export default function PaymentWebView() {
       navigation.goBack();
     }
   }, [navigation, result]);
-
-  const finalizeBooking = useCallback(async () => {
-    const docRef = await addDoc(collection(db, "bookings"), {
-      userId: booking.userId ?? null,
-      userEmail: booking.userEmail ?? null,
-      resourceId: booking.resourceId,
-      resourceName: booking.resourceName,
-      type: booking.type,
-      location: booking.location,
-      start: booking.startIso,
-      end: booking.endIso,
-      total: booking.total,
-      paymentId: booking.paymentId ?? null,
-    });
-
-    dispatch(resetCurrent());
-
-    setResult({
-      kind: "success",
-      title: "Payment successful",
-      message: "Your booking has been added.",
-      goTo: "MyBookings",
-    });
-  }, [booking, dispatch]);
 
   const showErrorResult = useCallback((title: string, message: string) => {
     setResult({
@@ -122,7 +95,15 @@ export default function PaymentWebView() {
             const status = statusData.status as string;
 
             if (status === "paid") {
-              await finalizeBooking();
+
+              dispatch(resetCurrent());
+
+              setResult({
+                kind: "success",
+                title: "Payment successful",
+                message: "Your booking has been added.",
+                goTo: "MyBookings",
+              });
             } else if (status === "canceled") {
               setResult({
                 kind: "error",
@@ -149,7 +130,7 @@ export default function PaymentWebView() {
         })();
       }
     },
-    [booking, finalizeBooking, showErrorResult]
+    [booking, dispatch, showErrorResult]
   );
 
   return (

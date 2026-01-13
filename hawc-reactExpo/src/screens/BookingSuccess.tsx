@@ -2,8 +2,6 @@
 import React, { useEffect, useState } from "react";
 import {View,Text,StyleSheet,ActivityIndicator,TouchableOpacity,} from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { auth, db } from "../config/firebaseConfig";
-import { addDoc, collection } from "firebase/firestore";
 import type { Resource } from "../types/env";
 import { useAppDispatch } from "../hooks/reduxHooks";
 import { resetAll } from "../store/slices/bookingDraft";
@@ -24,7 +22,6 @@ export default function BookingSuccessScreen() {
   const route = useRoute();
   const params = route.params as BookingSuccessParams | undefined;
 
-  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,71 +33,23 @@ export default function BookingSuccessScreen() {
     dispatch(resetAll());
   }, [dispatch]);
 
-  const buildUTC = (d?: string, hm?: string) => {
-    if (!d || !hm) return null;
-    const [hh, mm] = hm.split(":").map((n) => parseInt(n, 10));
-    if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
-    const dt = new Date(`${d}T00:00:00Z`);
-    dt.setUTCHours(hh, mm, 0, 0);
-    return dt;
-  };
   useEffect(() => {
-    const saveInvoiceBooking = async () => {
-      if (via !== "invoice") {
-        setSaved(true);
-        return;
-      }
+    if (via !== "invoice") {
+      setSaved(true);
+      return;
+    }
+    if (
+      !params?.data ||
+      !params.date ||
+      !params.start ||
+      !params.end ||
+      params.total == null
+    ) {
+      setError("Missing booking data.");
+      return;
+    }
 
-      if (
-        !params?.data ||
-        !params.date ||
-        !params.start ||
-        !params.end ||
-        params.total == null
-      ) {
-        setError("Missing booking data.");
-        return;
-      }
-
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        setError("You are not logged in.");
-        return;
-      }
-
-      const s = buildUTC(params.date, params.start);
-      const e = buildUTC(params.date, params.end);
-      if (!s || !e) {
-        setError("Invalid time range.");
-        return;
-      }
-
-      setSaving(true);
-      try {
-        await addDoc(collection(db, "bookings"), {
-          resourceId: String(params.data.id),
-          resourceName: params.data.name,
-          type: params.data.type,
-          location: (params.data as any).location ?? "",
-          start: s.toISOString(),
-          end: e.toISOString(),
-          total: params.total,
-          userId: currentUser.uid,
-          userEmail: currentUser.email ?? null,
-          paymentMethod: "invoice",
-          createdAt: new Date().toISOString(),
-        });
-
-        setSaved(true);
-      } catch (err) {
-        console.log("Failed to save invoice booking:", err);
-        setError("Could not save booking.");
-      } finally {
-        setSaving(false);
-      }
-    };
-
-    saveInvoiceBooking();
+    setSaved(true);
   }, []);
 
   const goToMyBookings = () => {
@@ -121,21 +70,21 @@ export default function BookingSuccessScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        {saving && (
+        {!saved && !error && (
           <>
             <ActivityIndicator size="large" color={BLUE} />
-            <Text style={[styles.text, { marginTop: 12 }]}>Saving booking…</Text>
+            <Text style={[styles.text, { marginTop: 12 }]}>Finalizing…</Text>
           </>
         )}
 
-        {!saving && error && (
+        {error && (
           <>
             <Text style={styles.title}>Something went wrong</Text>
             <Text style={[styles.text, { color: "#ef4444" }]}>{error}</Text>
           </>
         )}
 
-        {!saving && !error && saved && (
+        {saved && !error && (
           <>
             <Text style={styles.title}>{title}</Text>
             <Text style={styles.text}>{message}</Text>
@@ -143,7 +92,7 @@ export default function BookingSuccessScreen() {
         )}
       </View>
 
-      {!saving && (
+      {saved && !error && (
         <TouchableOpacity
           onPress={goToMyBookings}
           style={{

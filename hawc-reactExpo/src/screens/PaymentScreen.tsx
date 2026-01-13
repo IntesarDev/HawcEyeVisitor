@@ -126,13 +126,16 @@ export default function PaymentScreen() {
           amount: total,
           description: `Booking ${(data as any).name}`,
           metadata: {
-            resourceId: (data as any).id,
-            date,
-            start,
-            end,
-            userId: effectiveUserId,
-            userEmail: effectiveUserEmail,
-          },
+          resourceId: (data as any).id,
+          resourceName: (data as any).name,
+          type: (data as any).type,
+          location: (data as any).location ?? "",
+          startIso: sIso,
+          endIso: eIso,
+          total,
+          userId: effectiveUserId,
+          userEmail: effectiveUserEmail,
+        },
         }),
       });
 
@@ -214,13 +217,20 @@ export default function PaymentScreen() {
             amount: total,
             description: `Invoice booking ${(data as any).name}`,
             metadata: {
-              resourceId: (data as any).id,
-              date,
-              start,
-              end,
-              userId: currentUser.uid,
-              userEmail: currentUser.email ?? null,
-            },
+
+            requestId: `${(data as any).id}_${date}_${start}_${end}_${currentUser.uid}`,
+
+            resourceId: (data as any).id,
+            resourceName: (data as any).name,
+            type: (data as any).type,
+            location: (data as any).location ?? "",
+
+            startIso: sIso,
+            endIso: eIso,
+            total,
+            userId: currentUser.uid,
+            userEmail: currentUser.email ?? null,
+          },
           }),
         }
       );
