@@ -9,37 +9,35 @@ const mollieClient = createMollieClient({
 const resend = new Resend(process.env.RESEND_API_KEY);
 const TEST_EMAIL = "intesar.hogent@gmail.com";
 
-// ===== Firebase Init (SAFE) =====
-if (!admin.apps.length) {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+let db = null;
 
-  if (!raw) {
-    console.error("FIREBASE_SERVICE_ACCOUNT is missing in environment variables");
-    throw new Error("Missing FIREBASE_SERVICE_ACCOUNT");
-  }
+function getDb() {
+  if (db) return db;
+
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) return null;
 
   let serviceAccount;
   try {
     serviceAccount = JSON.parse(raw);
-  } catch (err) {
-    console.error("Invalid FIREBASE_SERVICE_ACCOUNT JSON:", err);
-    throw new Error("Invalid FIREBASE_SERVICE_ACCOUNT JSON");
+  } catch {
+    return null;
   }
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  }
+
+  db = admin.firestore();
+  return db;
 }
 
-const db = admin.firestore();
-
-// ===== Handler =====
 module.exports = async (req, res) => {
   const { id } = req.query;
 
-  if (!id) {
-    return res.status(400).json({ error: "id is required" });
-  }
+  if (!id) return res.status(400).json({ error: "id is required" });
 
   try {
     const payment = await mollieClient.payments.get(id);
@@ -48,13 +46,18 @@ module.exports = async (req, res) => {
       return res.status(200).json({ id: payment.id, status: payment.status });
     }
 
+    const firestore = getDb();
+    if (!firestore) {
+      return res.status(500).json({ error: "Firebase not configured on server" });
+    }
+
     const md = payment.metadata || {};
     const realUserEmail = md.userEmail || md.email || "unknown";
     const amountValue =
       payment.amount && payment.amount.value ? payment.amount.value : "0.00";
     const desc = payment.description || "HAWC booking";
 
-    const bookingRef = db.collection("bookings").doc(payment.id);
+    const bookingRef = firestore.collection("bookings").doc(payment.id);
     const snap = await bookingRef.get();
 
     if (!snap.exists) {
@@ -91,10 +94,7 @@ module.exports = async (req, res) => {
       await bookingRef.update({ emailed: true });
     }
 
-    return res.status(200).json({
-      id: payment.id,
-      status: payment.status,
-    });
+    return res.status(200).json({ id: payment.id, status: payment.status });
   } catch (err) {
     console.error("payment-status error:", err);
     return res.status(500).json({ error: "Failed to fetch payment status" });
