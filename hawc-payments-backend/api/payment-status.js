@@ -43,7 +43,8 @@ function getDbOrNull() {
 
 // ===== Handler =====
 module.exports = async (req, res) => {
-  const { id } = req.query;
+  
+  const { id } = req.body;
 
   if (!id) {
     return res.status(400).json({ error: "id is required" });
@@ -53,7 +54,8 @@ module.exports = async (req, res) => {
     const payment = await mollieClient.payments.get(id);
 
     if (payment.status !== "paid") {
-      return res.status(200).json({ id: payment.id, status: payment.status });
+      return res.status(200).end();
+
     }
 
     const db = getDbOrNull();
@@ -106,10 +108,8 @@ module.exports = async (req, res) => {
       await bookingRef.update({ emailed: true });
     }
 
-    return res.status(200).json({
-      id: payment.id,
-      status: payment.status,
-    });
+    return res.status(200).end();
+
   } catch (err) {
     console.error("payment-status error:", err);
     return res.status(500).json({ error: "Failed to fetch payment status" });

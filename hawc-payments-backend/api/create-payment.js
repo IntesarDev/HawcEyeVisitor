@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
       },
       description: description || "HAWC booking payment",
       redirectUrl: "https://hawc-payments-backend.vercel.app/api/payment-complete",
-      // webhookUrl: "https://hawc-payments-backend.vercel.app/api/mollie-webhook",
+      webhookUrl: "https://hawc-payments-backend.vercel.app/api/mollie-webhook",
       metadata: metadata || {},
     });
 
