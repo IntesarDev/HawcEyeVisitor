@@ -6,7 +6,7 @@ Hawc Eye Visitor is een mobiele applicatie (Expo React Native) voor het reserver
 De applicatie ondersteunt directe betalingen via Mollie, achteraf betalen via factuur (na administratieve goedkeuring) en automatische e-mailnotificaties via Resend.
 
 De backend is opgebouwd met Vercel Serverless Functions. Firebase Authentication en Firestore worden gebruikt voor authenticatie en dataopslag.
-Belangrijk: het opslaan van boekingen en het verzenden van e-mails gebeurt volledig in de backend (production-ready, exact één keer per boeking, met idempotentie).
+Belangrijk: het opslaan van boekingen en het verzenden van e-mails gebeurt volledig server-side via een Mollie webhook, waardoor de verwerking betrouwbaar is, zelfs wanneer de gebruiker niet terugkeert naar de applicatie (production-ready, exact één keer per boeking, met idempotentie).
 
 
 
@@ -64,11 +64,13 @@ Draft wordt verwijderd na succesvolle afronding
 1) Directe betaling (Mollie)
 Start via /api/create-payment
 Betaling via WebView
-App controleert status via /api/payment-status
-Backend verifieert de betaling en bij paid:
-slaat de reservatie op in Firestore (exact één keer)
-verstuurt een bevestigingsmail via Resend (exact één keer)
-App toont enkel de bevestiging aan de gebruiker
+
+De app controleert de betalingsstatus via /api/payment-status.
+De backend ontvangt een bevestiging via een Mollie webhook.
+Bij status paid (afgehandeld via de webhook) voert de backend het volgende uit:
+-slaat de reservatie op in Firestore (exact één keer, idempotent)
+-verstuurt een bevestigingsmail via Resend (exact één keer)
+-De app toont uitsluitend de bevestiging aan de gebruiker en voert zelf geen opslag- of e-maillogica uit.
 
 2) Betaling via factuur
 Enkel voor professionele gebruikers
@@ -134,11 +136,12 @@ hawc-payments-backend/
 
 
 ## 📌 Endpoints
-Endpoint	Beschrijving
-/api/create-payment	Start Mollie betaling
-/api/payment-status	Controleert status; bij paid: schrijft booking weg + verstuurt e-mail (idempotent)
-/api/payment-complete	Mollie callback
-/api/create-invoice-booking	Maakt invoice-booking aan: opslag in Firestore + één e-mail (met server-side approval check)
+Endpoint                     Beschrijving
+/api/create-payment          Start een Mollie betaling
+/api/payment-status          Geeft de huidige betalingsstatus terug aan de app
+/api/payment-complete        Redirect endpoint na Mollie checkout (UI flow)
+/api/mollie-webhook          Mollie webhook: bij status paid wordt de booking opgeslagen en wordt één bevestigingsmail verstuurd (idempotent)
+/api/create-invoice-booking  Maakt een invoice-booking aan: opslag in Firestore + één e-mail (met server-side approval check)
 
 
 
@@ -191,8 +194,14 @@ Handmatig deployen is niet nodig voor productie.
 
 ## 💳 Betalingsflow (Samenvatting)
 Directe betaling
-App → /create-payment → Mollie Checkout → /payment-status
-→ Backend: opslag in Firestore + e-mail → App toont bevestiging → Draft verwijderd
+App → /create-payment → Mollie Checkout
+
+Mollie bevestigt de betaling server-side via de webhook
+→ Backend: opslag van de booking in Firestore + verzending van één bevestigingsmail
+
+App controleert de status via /payment-status
+→ App toont de bevestiging aan de gebruiker
+→ Draft wordt verwijderd
 
 Factuurbetaling
 App → /create-invoice-booking
