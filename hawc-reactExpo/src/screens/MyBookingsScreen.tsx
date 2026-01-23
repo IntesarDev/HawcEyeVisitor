@@ -30,14 +30,12 @@ const fmt = (iso: string) => {
   return `${Y}-${M}-${D} ${h}:${m}`;
 };
 
-const HOURS24 = 24 * 3600 * 1000;
-
 export default function MyBookingsScreen() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const isFocused = useIsFocused();
 
   useEffect(() => {
-    if (!isFocused) return; 
+    if (!isFocused) return;
 
     let alive = true;
 
@@ -81,39 +79,52 @@ export default function MyBookingsScreen() {
   const sorted = useMemo(() => {
     const up: Booking[] = [];
     const past: Booking[] = [];
+
     for (const b of bookings)
       (new Date(b.end).getTime() > now ? up : past).push(b);
+
     up.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
     past.sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime());
+
     return { up, past };
   }, [bookings, now]);
 
-  const canCancel = (b: Booking) => new Date(b.start).getTime() - now >= HOURS24;
+  const canCancel = (b: Booking) => {
+    const start = new Date(b.start);
+
+    const todayEndLocal = new Date();
+    todayEndLocal.setHours(23, 59, 59, 999);
+
+    const minAllowed = new Date(todayEndLocal);
+    minAllowed.setDate(minAllowed.getDate() + 1);
+
+    return start.getTime() >= minAllowed.getTime();
+  };
 
   const cancelBooking = (id: string) => {
-  Alert.alert(
-    "Confirm cancelation",
-    "Are you sure you want to cancel this booking?",
-    [
-      { text: "No", style: "cancel" },
-      {
-        text: "Yes, cancel",
-        style: "destructive",
-        onPress: async () => {
-          setBookings((prev) => prev.filter((x) => x.id !== id));
-          console.log("Canceled booking:", id);
+    Alert.alert(
+      "Confirm cancelation",
+      "Are you sure you want to cancel this booking?",
+      [
+        { text: "No", style: "cancel" },
+        {
+          text: "Yes, cancel",
+          style: "destructive",
+          onPress: async () => {
+            setBookings((prev) => prev.filter((x) => x.id !== id));
+            console.log("Canceled booking:", id);
 
-          try {
-            await deleteDoc(doc(db, "bookings", id));
-          } catch (err) {
-            console.log("Delete booking error:", err);
-          }
+            try {
+              await deleteDoc(doc(db, "bookings", id));
+            } catch (err) {
+              console.log("Delete booking error:", err);
+            }
+          },
         },
-      },
-    ],
-    { cancelable: true }
-  );
-};
+      ],
+      { cancelable: true }
+    );
+  };
 
   const renderItem = (b: Booking) => {
     const allow = canCancel(b);
