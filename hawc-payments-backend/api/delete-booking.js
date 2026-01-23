@@ -2,7 +2,9 @@ import admin from "firebase-admin";
 
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.applicationDefault(),
+    credential: admin.credential.cert(
+      JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    ),
   });
 }
 
@@ -20,6 +22,7 @@ export default async function handler(req, res) {
     await admin.firestore().collection("bookings").doc(id).delete();
     return res.status(200).json({ ok: true });
   } catch (e) {
+    console.error(e);
     return res.status(500).json({ ok: false });
   }
 }
