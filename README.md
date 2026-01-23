@@ -57,6 +57,11 @@ Redux draft-systeem:
 Draft blijft bestaan tot betaling of factuur
 Draft wordt verwijderd na succesvolle afronding
 
+Annulering:
+Gebruikers kunnen een reservatie annuleren tot 24 uur vóór de starttijd.
+De mobiele app vergrendelt annulering binnen 24 uur.
+De effectieve verwijdering gebeurt server-side via een admin endpoint.
+
 
 
 
@@ -130,6 +135,7 @@ hawc-payments-backend/
  │   ├─ payment-status.js
  │   ├─ payment-complete.js
  │   └─ create-invoice-booking.js
+ │   ├─ delete-booking.js
  └─ vercel.json
 
 
@@ -142,6 +148,7 @@ Endpoint                     Beschrijving
 /api/payment-complete        Redirect endpoint na Mollie checkout (UI flow)
 /api/mollie-webhook          Mollie webhook: bij status paid wordt de booking opgeslagen en wordt één bevestigingsmail verstuurd (idempotent)
 /api/create-invoice-booking  Maakt een invoice-booking aan: opslag in Firestore + één e-mail (met server-side approval check)
+/api/delete-booking         Annuleert een booking server-side (Admin SDK, 24u-regel enforced in de app)
 
 
 
