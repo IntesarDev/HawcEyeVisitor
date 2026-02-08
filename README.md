@@ -1,4 +1,4 @@
-<img src="Readme-images/logo.png" width="300">
+<img src="readme-images/logo.png" width="300">
 
 ## 🧩 Overzicht
 
@@ -232,8 +232,8 @@ Geschikt voor bedrijfsgebruik én als Graduaatsproef.
 
 
 ## 📸 Screenshots
-<img src="Readme-images/login-screen.png" width="195">
-<img src="Readme-images/register-screen.png" width="205">
-<img src="Readme-images/home-screen.png" width="200">
-<img src="Readme-images/payment-confirmation-screen.png" width="425">
-<img src="Readme-images/admin-approval-screen.png" width="205">
+<img src="readme-images/login-screen.png" width="195">
+<img src="readme-images/register-screen.png" width="205">
+<img src="readme-images/home-screen.png" width="200">
+<img src="readme-images/payment-confirmation-screen.png" width="425">
+<img src="readme-images/admin-approval-screen.png" width="205">
